@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ProductPresentation</title>
+
+		<style>
+		
+		body {
+			font-family: Monospace;
+			margin: 0px;
+			overflow: hidden;
+		}
+		
+		canvas { 
+			width: 100%; 
+			height: 100%;
+		}
+	
+	</style>
+
+		<script src="lib/three.min.js"></script>
+		<script src="lib/stats.min.js"></script>
+		<script src="lib/OBJLoader.js"></script>
+
+	</head>
+
+<body>
+	<script>
+		
+		var scene, camera, renderer, controls, stats;
+		
+		function Start() {
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+			renderer = new THREE.WebGLRenderer( {antialias: true} );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor( 0xf0f0f0 );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.gammaInput = true;
+			renderer.gammaOutput = true;
+			renderer.shadowMap.enabled = true;
+			document.body.appendChild( renderer.domElement );
+			
+			stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.top = '0px';
+			document.body.appendChild( stats.domElement );
+		}
+
+		function animate() {
+			requestAnimationFrame( animate );
+			renderer.render( scene, camera );
+
+			stats.update();
+		}
+
+var loader = new THREE.OBJLoader();
+		
+	// load a resource
+loader.load
+( 
+	'Objects/300 sword/OBJ/sword.obj', 
+			
+	function ( object ){
+
+		scene.add( object );
+			
+			},
+	
+	// called when loading is in progresses
+	function ( xhr ) {
+
+		console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+			
+			},
+	
+	// called when loading has errors
+	function ( error ) {	
+
+		console.log( 'An error happened' );
+	}
+
+);
+		
+
+
+		Start();
+		animate();
+
+	</script>
+
+</body>
+</html>
+
+
