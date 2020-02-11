@@ -21,6 +21,7 @@
 		<script src="lib/three.min.js"></script>
 		<script src="lib/stats.min.js"></script>
 		<script src="lib/OBJLoader.js"></script>
+		<script src="lib/OrbitControls.js"></script>
 	</head>
 
 <body>
@@ -39,6 +40,9 @@
 			renderer.setSize( window.innerWidth, window.innerHeight );
 			;
 			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.gammaInput = true;
+			renderer.gammaOutput = true;
+			renderer.shadowMap.enabled = true;
 			document.body.appendChild( renderer.domElement );
 			
 			stats = new Stats();
@@ -46,18 +50,71 @@
 			stats.domElement.style.top = '0px';
 			document.body.appendChild( stats.domElement );
 
-			var geo = new THREE.BoxBufferGeometry(1,1,1);
-			var mat = new THREE.MeshBasicMaterial({color: 0xff0000});
-			var box = new THREE.Mesh(geo,mat);
-			scene.add(box);
+			var controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+
+			hemiLight = new THREE.HemisphereLight( 0xcb4125, 0xffffff, 0.6 );
+			//hemiLight.color.setHSL( 0.6, 1, 0.6 );
+			hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+			hemiLight.position.set( 200, 50, 200 );
+			scene.add( hemiLight );
+
+			dirLight = new THREE.DirectionalLight( 0xcb4125, 1 );
+			dirLight.color.setHSL( 0.1, 1, 0.95 );
+			dirLight.position.set( -200, 30, 200 );
+			dirLight.position.multiplyScalar( 50 );
+			scene.add( dirLight );
+			dirLight.castShadow = true;
+			dirLight.shadow.mapSize.width = 1024;
+			dirLight.shadow.mapSize.height = 1024;
 
 			var loader = new THREE.OBJLoader();
 		
+			
+			var texture = new THREE.TextureLoader().load( 'Objects/SwordSting/Textures/Sting_Base_Color.png' );
+			var normalmap = new THREE.TextureLoader().load('Objects/SwordSting/Textures/Sting_Normal_DirectX.png' );
+			var bumpmap = new THREE.TextureLoader().load('Objects/SwordSting/Textures/Sting_Height.png' );
+			var metpmap = new THREE.TextureLoader().load('Objects/SwordSting/Textures/Sting_Metallic.png' );
+			var rougpmap = new THREE.TextureLoader().load('Objects/SwordSting/Textures/Sting_Roughness.png' );
+
+			var geometry = new THREE.CylinderBufferGeometry( 50, 50, 3, 64 );
+			var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+			var cylinder = new THREE.Mesh( geometry, material );
+			scene.add(cylinder);
+			cylinder.position.set(0,0,-30);
+			cylinder.rotation.x = 1.57;
+			var geometry1 = new THREE.CylinderBufferGeometry( 40, 40, 2.5, 64 );
+			var material1 = new THREE.MeshBasicMaterial( {color: 0xff00ff} );
+			var cylinder1 = new THREE.Mesh( geometry1, material1 );
+			scene.add(cylinder1);
+			cylinder1.position.set(0,0,-27.5);
+			cylinder1.rotation.x = 1.57;
+
+
+
+
+
+			
+
 			// load a resource
 			loader.load( 
 				'Objects/SwordSting/Sting-Sword-lowpoly.obj', 
 			
 				function ( object ){
+					 object.traverse( function ( child ) {
+
+					 	if ( child instanceof THREE.Mesh ) {
+
+					 		child.material.map = texture;
+					 		child.material.normalMap = normalmap;
+					 		child.material.bumpMap = bumpmap;
+					 		//child.material.metalnessMap =  metpmap;
+					 		//child.material.roughnessMap = rougpmap;
+
+                    }
+
+                } );
+
 
 					scene.add( object );
 
@@ -80,17 +137,23 @@
 		);
 			}
 
+
+
 		function animate() {
 			requestAnimationFrame( animate );
 			renderer.render( scene, camera );
-
+			controls.update();  
 			stats.update();
 		}
 
+				
+
+			
+
+		
 
 		Start();
-		camera.position.z= 20000000000000000000000;
-		animate();
+		camera.position.z=150;		animate();
 
 	</script>
 
