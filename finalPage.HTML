@@ -21,6 +21,7 @@
 		<script src="lib/three.min.js"></script>
 		<script src="lib/stats.min.js"></script>
 		<script src="lib/OBJLoader.js"></script>
+		<script scr="lib/OrbitControls.js"></script>
 	</head>
 
 <body>
@@ -49,9 +50,6 @@
 			stats.domElement.style.top = '0px';
 			document.body.appendChild( stats.domElement );
 
-
-
-
 			hemiLight = new THREE.HemisphereLight( 0xcb4125, 0xffffff, 0.6 );
 			hemiLight.color.setHSL( 0.6, 1, 0.6 );
 			hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
@@ -66,6 +64,9 @@
 			dirLight.shadow.mapSize.width = 1024;
 			dirLight.shadow.mapSize.height = 1024;
 			scene.add( dirLight );
+
+			controls = new THREE.OrbitControls( camera, renderer.domElement );
+
 
 
 
@@ -122,6 +123,7 @@
 			requestAnimationFrame( animate );
 			renderer.render( scene, camera ); 
 			stats.update();
+			controls.update();
 		}
 
 		Start();
