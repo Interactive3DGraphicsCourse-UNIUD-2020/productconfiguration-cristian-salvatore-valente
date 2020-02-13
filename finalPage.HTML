@@ -9,7 +9,7 @@
 			font-family: Monospace;
 			margin: 0px;
 			overflow: hidden;
-			background-color: #996000;
+			/*background-color: #996000;*/
 		}
 		
 		canvas { 
@@ -60,6 +60,7 @@
 			stats.domElement.style.top = '0px';
 			document.body.appendChild( stats.domElement );
 
+
 			hemiLight = new THREE.HemisphereLight( 0xcb4125, 0xffffff, 0.6 );
 			hemiLight.color.setHSL( 0.6, 1, 0.6 );
 			hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
@@ -74,22 +75,18 @@
 			dirLight.shadow.mapSize.width = 1024;
 			dirLight.shadow.mapSize.height = 1024;
 			scene.add( dirLight );
+			
 
 			controls = new THREE.OrbitControls( camera, renderer.domElement );
 
-			var shaderProp = {
-				vertexShader: document.getElementById("vs0"),
-				fragmetShader: document.getElementById("fs0")
-			};
+			
 			
 
  
-
-
 /*
 
-
-			var loader = new THREE.OBJLoader();
+  //SWORD LOADER
+		var loader = new THREE.OBJLoader();
 			// load a resource
 			loader.load( 
 				'Objects/SwordSting/Sting-Sword-lowpoly.obj', 
@@ -131,17 +128,28 @@
 				console.log( 'An error happened' );
 			}
 
-		);  */
+		); 
 
+		
+		let uniforms = {
+        	pointLightPosition: {type: 'vec3', value: new THREE.Color(0xACB6E5)},
+        	clight: {type: 'vec3', value: new THREE.Color(0x74ebd5)},
+        	cdiff: {type:'vec3',value: new THREE.Color(0x74ebd5)}
+    	}
+/*
 		var geo = new THREE.BoxBufferGeometry(1,1,1);
 
+
 		var mat =  new THREE.ShaderMaterial({
-   			fragmentShader: fShader(),
-    		vertexShader: vShader()});
+			uniforms: uniforms,
+  			fragmentShader: fShader(),
+			vertexShader: vShader()
+    		});
 
 		var mesh = new THREE.Mesh(geo,mat);
-		scene.add(mesh);
-
+		scene.add(mesh); 
+*/
+			
 			}
 
 function fShader(){
@@ -152,15 +160,17 @@ uniform vec3 pointLightPosition; // in world space
 uniform vec3 clight;
 uniform vec3 cdiff;
 const float PI = 3.14159;
+
 void main() {
-vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
-vec3 l = normalize(lPosition.xyz - vPosition.xyz);
-vec3 n = normalize( vNormal ); // interpolation destroys normalization, so we have to normalize
-float nDotl = max(dot( n, l ),0.0);
-// formula would be outRadiance = clight * PI * cdiff/PI * nDotl, the two PI cancel out
-vec3 outRadiance = clight * nDotl * cdiff;
-// gamma encode the final value
-gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+	vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+	vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+	vec3 n = normalize( vNormal ); 
+	// interpolation destroys normalization, so we have to normalize
+	float nDotl = max(dot( n, l ),0.0);
+	// formula would be outRadiance = clight * PI * cdiff/PI * nDotl, the two PI cancel out
+	vec3 outRadiance = clight * nDotl * cdiff;
+	// gamma encode the final value
+	gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
 `
 }
 
@@ -168,14 +178,29 @@ function vShader(){
 	return `
 varying vec3 vNormal;
 varying vec3 vPosition;
+
 void main() {
-vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
- vPosition = vPos.xyz;
- vNormal = normalMatrix * normal;
- gl_Position = projectionMatrix * vPos;
+	vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+	 vPosition = vPos.xyz;
+	 vNormal = normalMatrix * normal;
+	 gl_Position = projectionMatrix * vPos;
 }`
 
 }
+
+function MapLoader(){
+	var loader = new THREE.CubeTextureLoader();
+	loader.setPath( 'textures/CubeMaps/Lycksele/' );
+	var textureCube = loader.load( [
+	'posx.jpg', 'negx.jpg',
+	'posy.jpg', 'negy.jpg',
+	'posz.jpg', 'negz.jpg'
+] );
+	scene.background = textureCube;
+}
+
+
+
 
 
 		function animate() {
@@ -185,7 +210,9 @@ vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
 			controls.update();
 		}
 
+		
 		Start();
+		MapLoader();
 		camera.position.z=150;		
 		animate();
 
