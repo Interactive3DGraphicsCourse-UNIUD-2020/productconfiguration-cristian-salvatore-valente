@@ -28,16 +28,6 @@
 
 <body>
 
-	<script type="x-shader/x-vertex" id="vs0" >
-
-	</script>
-
-	<script type="x-shader/x-fragment" id="fs0" >
-
-	</script>
-
-
-
 	<script>
 		
 		var scene, camera, renderer, controls, stats;
@@ -79,13 +69,41 @@
 
 			controls = new THREE.OrbitControls( camera, renderer.domElement );
 
-			
-			
 
- 
-/*
 
-  //SWORD LOADER
+			var loader = new THREE.CubeTextureLoader();
+			loader.setPath( `textures/CubeMaps/HeartInTheSand/` );
+			var textureCube = loader.load( [
+				'posx.jpg', 'negx.jpg',
+				'posy.jpg', 'negy.jpg',
+				'posz.jpg', 'negz.jpg'
+			] );
+			scene.background = textureCube;
+
+			var mat = new THREE.MeshPhongMaterial({envMap: textureCube, emissive:0x8f9122 ,color:0x2b2a0d ,specular:0x6d5c5c ,shininess: 74 , reflectivity: 0.15 });
+			var geo = new THREE.CylinderBufferGeometry(50,50,2.5,128);
+			var lastPlane = new THREE.Mesh(geo,mat);
+			scene.add(lastPlane);
+			var geo1 = new THREE.CylinderBufferGeometry(48,48,0.5,64);
+			var geo2 = new THREE.CylinderBufferGeometry(46,46,0.5,64);
+			var geo3 = new THREE.CylinderBufferGeometry(44,44,0.5,64);
+			var lastPlane1 = new THREE.Mesh(geo1,mat);
+			var lastPlane2 = new THREE.Mesh(geo2,mat);
+			var lastPlane3 = new THREE.Mesh(geo3,mat);
+			lastPlane.add(lastPlane1);
+			lastPlane.add(lastPlane2);
+			lastPlane.add(lastPlane3);
+			lastPlane1.position.y = 0.25 +2.5/2;
+			lastPlane2.position.y = 0.75 +2.5/2;
+			lastPlane3.position.y = 1.25 +2.5/2;
+			scene.add(lastPlane1);
+			scene.add(lastPlane2);
+			scene.add(lastPlane3);
+
+
+			camera.position.z=80;
+
+/*	//SWORD LOADER
 		var loader = new THREE.OBJLoader();
 			// load a resource
 			loader.load( 
@@ -135,8 +153,7 @@
         	pointLightPosition: {type: 'vec3', value: new THREE.Color(0xACB6E5)},
         	clight: {type: 'vec3', value: new THREE.Color(0x74ebd5)},
         	cdiff: {type:'vec3',value: new THREE.Color(0x74ebd5)}
-    	}
-/*
+    	}/*
 		var geo = new THREE.BoxBufferGeometry(1,1,1);
 
 
@@ -149,58 +166,86 @@
 		var mesh = new THREE.Mesh(geo,mat);
 		scene.add(mesh); 
 */
-			
+
+	}
+
+/*
+		function fShader(){
+			return `
+				varying vec3 vNormal;
+				varying vec3 vPosition;
+				uniform vec3 pointLightPosition; // in world space
+				uniform vec3 clight;
+				uniform vec3 cdiff;
+				const float PI = 3.14159;
+
+				void main() {	
+					vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+					vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+					vec3 n = normalize( vNormal ); 
+					// interpolation destroys normalization, so we have to normalize
+					float nDotl = max(dot( n, l ),0.0);
+					// formula would be outRadiance = clight * PI * cdiff/PI * nDotl, the two PI cancel out
+					vec3 outRadiance = clight * nDotl * cdiff;
+					// gamma encode the final value
+					gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);`
+				}
+
+		function vShader(){
+			return `
+				varying vec3 vNormal;
+				varying vec3 vPosition;
+
+				void main() {
+					vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+					vPosition = vPos.xyz;
+	 				vNormal = normalMatrix * normal;
+	 				gl_Position = projectionMatrix * vPos;}`
+	 			}
+
+*/
+
+
+		function MapLoader(loaderPath){
+			var loader = new THREE.CubeTextureLoader();
+			loader.setPath( loaderPath );
+			var textureCube = loader.load( [
+				'posx.jpg', 'negx.jpg',
+				'posy.jpg', 'negy.jpg',
+				'posz.jpg', 'negz.jpg'
+			] );
+			scene.background = textureCube;
+		}
+
+		function changeMap(event){
+			var x = getRndInteger(1,6);
+			switch(x) {
+  				case 1:
+  					MapLoader(`textures/CubeMaps/HeartInTheSand/`);
+    				break;
+  				case 2:
+  					MapLoader(`textures/CubeMaps/Lycksele/`);
+    				break;
+  				case 3:
+ 					MapLoader(`textures/CubeMaps/Maskonaive/`);
+ 				    break;
+  				case 4:
+ 					MapLoader(`textures/CubeMaps/NiagaraFalls3/`);
+    				break;
+  				case 5:
+  					MapLoader(`textures/CubeMaps/NightPath/`);
+    				break;
+ 				case 6:
+ 					MapLoader(`textures/CubeMaps/Stairs/`);
+    				break;
+  				default:
+					return MapLoader(`textures/CubeMaps/NissiBeach2/`);
+				}
 			}
 
-function fShader(){
-return `
-varying vec3 vNormal;
-varying vec3 vPosition;
-uniform vec3 pointLightPosition; // in world space
-uniform vec3 clight;
-uniform vec3 cdiff;
-const float PI = 3.14159;
-
-void main() {
-	vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
-	vec3 l = normalize(lPosition.xyz - vPosition.xyz);
-	vec3 n = normalize( vNormal ); 
-	// interpolation destroys normalization, so we have to normalize
-	float nDotl = max(dot( n, l ),0.0);
-	// formula would be outRadiance = clight * PI * cdiff/PI * nDotl, the two PI cancel out
-	vec3 outRadiance = clight * nDotl * cdiff;
-	// gamma encode the final value
-	gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
-`
-}
-
-function vShader(){
-	return `
-varying vec3 vNormal;
-varying vec3 vPosition;
-
-void main() {
-	vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
-	 vPosition = vPos.xyz;
-	 vNormal = normalMatrix * normal;
-	 gl_Position = projectionMatrix * vPos;
-}`
-
-}
-
-function MapLoader(){
-	var loader = new THREE.CubeTextureLoader();
-	loader.setPath( 'textures/CubeMaps/Lycksele/' );
-	var textureCube = loader.load( [
-	'posx.jpg', 'negx.jpg',
-	'posy.jpg', 'negy.jpg',
-	'posz.jpg', 'negz.jpg'
-] );
-	scene.background = textureCube;
-}
-
-
-
+		function getRndInteger(min, max){
+			return Math.floor(Math.random() * (max - min) ) + min;
+		}
 
 
 		function animate() {
@@ -208,12 +253,13 @@ function MapLoader(){
 			renderer.render( scene, camera ); 
 			stats.update();
 			controls.update();
+			document.body.addEventListener("keypress",changeMap);
 		}
 
 		
 		Start();
-		MapLoader();
-		camera.position.z=150;		
+
+		
 		animate();
 
 	</script>
