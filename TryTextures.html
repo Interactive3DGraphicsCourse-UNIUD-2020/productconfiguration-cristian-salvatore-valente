@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ProductPresentation</title>
+	<style>
+
+	body {
+		font-family: Monospace;
+		margin: 0px;
+		overflow: hidden;
+		/*background-color: #996000;*/
+	}
+
+	canvas {
+		width: 100%;
+		height: 100%;
+	}
+
+</style>
+
+	</head>
+
+
+
+<body>
+
+		<script src="lib/three.min.js"></script>
+		<script src="lib/stats.min.js"></script>
+		<script src="lib/OBJLoader.js"></script>
+		<script src="lib/OrbitControls.js"></script>
+		<script src="lib/vreticle.js"></script>
+
+
+
+<script type="text/x-glsl" id="vertex">
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying vec3 wPosition;
+  varying vec2 uVv;
+
+  void main() {
+    vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+    vPosition = vPos.xyz;
+    wPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+    vNormal = normalMatrix * normal;
+    uVv = uv;
+    gl_Position = projectionMatrix * vPos;
+}
+ </script>
+
+
+<script type="text/x-glsl" id="fragment">
+
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying vec3 wPosition;
+  varying vec2 uVv;
+
+  uniform vec3 pointLightPosition; // in world space
+  uniform vec3 clight;
+
+  uniform vec3 ambientLight;
+  uniform sampler2D aoMap;
+
+  uniform sampler2D specularMap;
+  uniform sampler2D diffuseMap;
+  uniform sampler2D roughnessMap;
+  uniform vec2 textureRepeat;
+
+  uniform sampler2D normalMap;
+  uniform vec2 normalScale;
+
+
+  uniform samplerCube envMap;
+
+  const float PI = 3.14159;
+
+  vec3 cdiff;
+  vec3 cspec;
+  float roughness;
+
+  vec3 FSchlick(float lDoth) {
+    return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
+  }
+
+  float DGGX(float nDoth, float alpha) {
+    float alpha2 = alpha*alpha;
+    float d = nDoth*nDoth*(alpha2-1.0)+1.0;
+    return (  alpha2 / (PI*d*d));
+  }
+
+  float G1(float dotProduct, float k) {
+    return (dotProduct / (dotProduct*(1.0-k) + k) );
+  }
+
+  float GSmith(float nDotv, float nDotl) {
+      float k = roughness*roughness;
+      return G1(nDotl,k)*G1(nDotv,k);
+  }
+
+  #extension GL_OES_standard_derivatives : enable
+
+  vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {
+
+  vec3 q0 = dFdx( eye_pos.xyz );
+  vec3 q1 = dFdy( eye_pos.xyz );
+  vec2 st0 = dFdx( uVv.st );
+  vec2 st1 = dFdy( uVv.st );
+
+  vec3 S = normalize(  q0 * st1.t - q1 * st0.t );
+  vec3 T = normalize( -q0 * st1.s + q1 * st0.s );
+  vec3 N =  surf_norm ;
+
+  vec3 mapN = normalize(texture2D( normalMap, uVv ).xyz * 2.0 - 1.0);
+  mapN.xy = normalScale * mapN.xy;
+  mat3 tsn = mat3( S, T, N );
+  return normalize( tsn * mapN );
+
+}
+
+  vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+  return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
+}
+
+  void main() {
+
+
+    vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+    vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+    vec3 n = perturbNormal2Arb( vPosition,normalize(vNormal));
+    vec3 v = normalize( -vPosition);
+    vec3 h = normalize( v + l);
+
+    /*BRDF section*/
+    // small quantity to prevent divisions by 0
+    float nDotl = max(dot( n, l ),0.000001);
+    float lDoth = max(dot( l, h ),0.000001);
+    float nDoth = max(dot( n, h ),0.000001);
+    float vDoth = max(dot( v, h ),0.000001);
+    float nDotv = max(dot( n, v ),0.000001);
+
+    cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
+    // texture in sRGB, linearize
+    cdiff = pow( cdiff, vec3(2.2));
+    cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
+    // texture in sRGB, linearize
+    cspec = pow( cspec, vec3(2.2));
+    roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
+
+    vec3 fresnel = FSchlick(lDoth);
+    vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
+
+
+    /* enviromentMapping section*/
+    vec3 worldN = inverseTransformDirection( n, viewMatrix );
+    vec3 worldV = cameraPosition - wPosition ;
+    vec3 r = normalize( reflect(-worldV,worldN));
+
+    vec3 irradiance = textureCube( envMap, worldN).rgb;
+    // texture in sRGB, linearize
+    irradiance = pow( irradiance, vec3(2.2));
+
+    vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
+    // texture in sRGB, linearize
+    envLight = pow( envLight, vec3(2.2));
+
+    vec3 outRadiance =  PI* clight * nDotl * BRDF
+              +ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
+              + cdiff*irradiance
+              +fresnel*envLight;
+
+    // gamma encode the final value
+    gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+  }
+
+
+
+
+</script>
+
+<script>
+var scene, camera, renderer, controls, stats;
+
+function Start() {
+
+	scene = new THREE.Scene();
+	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
+
+
+
+	renderer = new THREE.WebGLRenderer( {antialias: true} );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.gammaInput = true;
+	renderer.gammaOutput = true;
+	renderer.shadowMap.enabled = true;
+	document.body.appendChild( renderer.domElement );
+
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	document.body.appendChild( stats.domElement );
+
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+		var hemiLight = new THREE.HemisphereLight( 0xcb4125, 0xffffff, 0.6 );
+		hemiLight.color.setHSL( 0.6, 1, 0.6 );
+		hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+		hemiLight.position.set( 200, 50, 200 );
+		scene.add( hemiLight );
+
+		var dirLight = new THREE.DirectionalLight( 0xcb4125, 1 );
+		dirLight.color.setHSL( 0.1, 1, 0.95 );
+		dirLight.position.set( -200, 30, 200 );
+		dirLight.position.multiplyScalar( 50 );
+		dirLight.castShadow = true;
+		dirLight.shadow.mapSize.width = 1024;
+		dirLight.shadow.mapSize.height = 1024;
+		scene.add( dirLight );
+
+camera.position.z+= 200;
+
+
+
+objLoader("DoubleBlade");
+}
+
+
+
+	function objLoader(objectName){
+
+		var vShader = document.getElementById("vertex").textContent;
+		var fShader = document.getElementById("fragment").textContent;
+
+		var specTxt = loadTexture("Objects/"+objectName+"/Textures/Specular.png");
+		var diffTxt = loadTexture("Objects/"+objectName+"/Textures/Diffusive.png");
+		var rougTxt = loadTexture("Objects/"+objectName+"/Textures/Roughness.png");
+		var normalTxtr = loadTexture("Objects/"+objectName+"/Textures/Normal.png");
+		var occlusionTxtr = loadTexture("Objects/"+objectName+"/Textures/AmbientOcclusion.png");
+
+
+		var cubeLoader = new THREE.CubeTextureLoader();
+			cubeLoader.setPath('textures/CubeMaps/Cave/');
+		var textureCube = cubeLoader.load( [
+				'px.png', 'nx.png',
+				'py.png', 'ny.png',
+				'pz.png', 'nz.png'
+			] );
+
+
+		var uniforms = {
+			pointLightPosition:{type:"v3", value: new THREE.Vector3()}, // in world space
+			clight:{type:"v3", value:new THREE.Color()},
+			specularMap:{type:"t", value: specTxt},
+			diffuseMap:{type:"t", value: diffTxt},
+			roughnessMap:{type:"t", value: rougTxt},
+			textureRepeat:{type:"v2", value:new THREE.Vector2(1,1)},
+			normalMap:{type:"t", value: normalTxtr},
+			normalScale:{type:"v2", value: new THREE.Vector2(2,2)},
+			aoMap:{type:"t", value: occlusionTxtr},
+			ambientLight:{type:"v3", value:new THREE.Vector3()},
+			envMap:{type:"t", value: textureCube}
+
+		}
+
+
+
+		var shaderMat = new THREE.ShaderMaterial({
+			uniforms: uniforms,
+			fragmentShader: fShader ,
+			vertexShader: vShader,
+		});
+
+		var loader = new THREE.OBJLoader();
+
+		loader.load("Objects/"+objectName+"/"+objectName+".obj",function(obj){
+
+					obj.children.forEach(writeGeometry);
+
+					function writeGeometry(children){
+						geometry = children.geometry;
+						mesh = new THREE.Mesh( geometry, shaderMat );
+						//mesh.scale.set(1,1,1);
+						// mesh.position.set(globalPosition.x,globalPosition.y,globalPosition.z);
+
+
+						scene.add( mesh );}
+				});
+
+		// uniforms.pointLightPosition.value = directedLight;
+		// uniforms.ambientLight.value = ambientLight;
+
+	}
+
+
+
+
+
+
+
+
+function loadTexture(file) {
+	var texture = new THREE.TextureLoader().load( file , function ( texture ) {
+
+	texture.minFilter = THREE.LinearMipMapLinearFilter;
+	texture.anisotropy = renderer.getMaxAnisotropy();
+	texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+		texture.offset.set( 0, 0 );
+	texture.needsUpdate = true;} )
+	return texture;
+		}
+
+// function onWindowResize() {
+//
+// 	camera.aspect = window.innerWidth / window.innerHeight;
+// 	camera.updateProjectionMatrix();
+//
+// 	renderer.setSize( window.innerWidth, window.innerHeight );
+//
+// 		}
+
+
+
+function Animate() {
+		requestAnimationFrame( Animate );
+		renderer.render( scene, camera );
+		stats.update();
+		controls.update();
+}
+
+Start();
+Animate();
+</script>
+
+
+	</body>
+</html>
