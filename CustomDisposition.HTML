@@ -57,7 +57,6 @@
 		<script src="lib/stats.min.js"></script>
 		<script src="lib/OBJLoader.js"></script>
 		<script src="lib/OrbitControls.js"></script>
-		<script src="lib/vreticle.js"></script>
 
 		<!-- shaders -->
 
@@ -504,14 +503,6 @@
 		objLoader("DoubleBlades","textures/CubeMaps/RockDesert/",new THREE.Vector3(),new THREE.Vector3(), objLeftPos,new THREE.Vector3(0.08,0.08,0.08));
 	}
 
-	function onMouseMove( event ) {
-
-		event.preventDefault();
-
-		mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-		mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
-			}
 
 	function onWindowResize() {
 
