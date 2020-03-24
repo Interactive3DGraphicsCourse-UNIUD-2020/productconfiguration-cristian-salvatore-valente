@@ -52,6 +52,10 @@
   <script  type="module">
   var scene, camera, renderer, controls, stats;
   var menu = document.getElementById( "menu" );
+  var objects = [];
+  var Mesh = ["DoubleBlades.obj","Katana.obj","LeviatanAxe.obj","SwordSting.obj"];
+  var current;
+
   var BUTTONS = {
     "back":"Back",
     "heart":"AddPrefer",
@@ -70,7 +74,7 @@
 
 
 
-
+    current = 0;
 
     // default: white, 1.0 intensity
     var lightParameters = {
@@ -103,9 +107,7 @@
 
   camera.position.z+= 20;
 
-  var geo =  new THREE.BoxBufferGeometry(1,1,1);
-  var mat = new THREE.MeshBasicMaterial({wireframe:true});
-  var cube = new THREE.Mesh(geo,mat);
+
 
 
   createMenu();
@@ -113,7 +115,6 @@
 
 
 
-  scene.add(cube);
 
 
 
@@ -126,41 +127,107 @@ function createMenu() {
 					var button = document.createElement( 'button' );
 					button.innerHTML = '<img src="Icons/'+i+'.png" style="width:30px;height:30px;" >';
 					menu.appendChild( button );
-          button.addEventListener('click',buttonCallback(BUTTONS[i]));
+          button.addEventListener('click',buttonCallback(BUTTONS[i]),false);
         }
       }
 
 
 
 
-function buttonCallback( value) {
+function buttonCallback(value) {
   if(value=="Zoom"){
 
-  return function () {} ;
+    return function () {
+      for ( var i = 0; i < objects.length; i ++ ) {
+        var object = objects[ i ];
+
+        object.remove( object );
+        scene.remove( object );
+      }}
 
   }else if(value=="BackZoom"){
-    return function () {} ;
+  }else if(value=="RotateRight"){
+  }else if(value=="RotateLeft"){
+  }else if(value=="AddLike"){
+  }else if(value=="AddPrefer"){
+  }else if(value=="Back"){
 
-  }else if(value="RotateRight"){
+    return function(){
 
-    return function () {
-      camera.lookAt(0,0,0);
-    } ;
+      if(current==0){
+        current=3;
+      }else{
+        current--; };
 
-  }else if(value="RotateLeft"){
+        for ( var i = 0; i < objects.length; i ++ ) {
+          var object = objects[ i ];
 
-    return function () {
-      camera.lookAt(0,0,0);
-    } ;
+          object.remove( object );
+          scene.remove( object );
+        };
 
-  }else if(value="SetTexture"){
-  }else if(value="AddLike"){
-  }else if(value="AddPrefer"){
-  }else if(value="Back"){
-  }else if(value="Next"){
-  }else if(value="Share"){
-  }else if(value="AddToCart"){
-  }else if(value="SetTexture"){}
+      var pointer = Mesh[current];
+
+      var loader = new THREE.OBJLoader();
+
+      loader.load("Objects/"+pointer,function(obj){
+
+            obj.children.forEach(writeGeometry);
+
+            function writeGeometry(children){
+              var geometry = children.geometry;
+              var shaderMat = new THREE.MeshBasicMaterial();
+              var mesh = new THREE.Mesh( geometry, shaderMat );
+
+              objects.push(mesh);
+              scene.add( mesh );}
+      });
+
+
+
+    };
+
+  }else if(value=="Next"){
+
+    return function(){
+
+      if(current==3){
+        current=0;
+      }else{
+        current++; };
+
+
+        for ( var i = 0; i < objects.length; i ++ ) {
+          var object = objects[ i ];
+
+          object.remove( object );
+          scene.remove( object );
+        };
+
+      var pointer = Mesh[current];
+
+      var loader = new THREE.OBJLoader();
+
+      loader.load("Objects/"+pointer,function(obj){
+
+            obj.children.forEach(writeGeometry);
+
+            function writeGeometry(children){
+              var geometry = children.geometry;
+              var shaderMat = new THREE.MeshBasicMaterial();
+              var mesh = new THREE.Mesh( geometry, shaderMat );
+
+              objects.push(mesh);
+              scene.add( mesh );}
+      });
+
+
+    };
+
+  }else if(value=="Share"){
+  }else if(value=="AddToCart"){
+  }else if(value=="SetTexture"){}
+
 
 }
 
