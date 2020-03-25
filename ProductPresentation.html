@@ -211,7 +211,7 @@ canvas {
 var scene, camera, renderer, controls, stats;
 var menu = document.getElementById( "menu" );
 var objects = [];
-var Mesh = ["DoubleBlades","Katana","LeviatanAxe","SwordSting"];
+var Mesh = ["DoubleBlades","Katanta","Axe","SwordSting"];
 var current;
 var currentCube="Cave";
 
@@ -441,7 +441,7 @@ function loadTexture(file) {
 
 		      var pointer = Mesh[current];
 
-					OBJ(pointer,1);
+					OBJ(pointer,2);
 
 		      }
 
@@ -472,9 +472,9 @@ function Animate() {
 function OBJ(objectName,type){
 	if(objectName=="DoubleBlades"){
 		objLoader(objectName,type,currentCube,0.3);
-	}else if(objectName=="Katana"){
+	}else if(objectName=="Katanta"){
 		objLoader(objectName,type,currentCube,0.9);
-	}else if(objectName=="LeviatanAxe"){
+	}else if(objectName=="Axe"){
 		objLoader(objectName,type,currentCube,1);
 	}else if(objectName=="SwordSting"){
 		objLoader(objectName,type,currentCube,1);
