@@ -60,12 +60,15 @@
     "back":"Back",
     "heart":"AddPrefer",
     "shopping-cart": "AddToCart",
+    "like": "AddLike",
     "rotate-right": "RotateLeft",
     "maxifying-glass":"Zoom",
-    "hamburgerMenu": "SetTexture",
+    "change": "changeTexture",
     "minifying-glass": "BackZoom",
     "rotate-left": "RotateRight",
-    "like": "AddLike",
+    "light-bulb-1":"Set1Light",
+    "light-bulb-2":"Set2Light",
+    "light-bulb-3":"Set3Light",
     "share": "Share",
     "next":"Next"
   };
@@ -75,14 +78,7 @@
 
 
     current = 0;
-
-    // default: white, 1.0 intensity
-    var lightParameters = {
-      red: 1.0,
-      green: 1.0,
-      blue: 1.0,
-      intensity: 1.0,
-    }
+    
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
@@ -125,6 +121,8 @@ function createMenu() {
 				for ( var i in BUTTONS ) {
 
 					var button = document.createElement( 'button' );
+
+          button.setAttribute("id",BUTTONS[i]);
 					button.innerHTML = '<img src="Icons/'+i+'.png" style="width:30px;height:30px;" >';
 					menu.appendChild( button );
           button.addEventListener('click',buttonCallback(BUTTONS[i]),false);
@@ -150,6 +148,9 @@ function buttonCallback(value) {
   }else if(value=="RotateLeft"){
   }else if(value=="AddLike"){
   }else if(value=="AddPrefer"){
+  }else if(value=="Set2Light"){
+  }else if(value=="Set3Light"){
+  }else if(value=="Set1Light"){
   }else if(value=="Back"){
 
     return function(){
@@ -226,10 +227,15 @@ function buttonCallback(value) {
 
   }else if(value=="Share"){
   }else if(value=="AddToCart"){
-  }else if(value=="SetTexture"){}
+  }else if(value=="changeTexture"){
+     }
 
 
-}
+  }
+
+
+
+
 
 
 
@@ -240,7 +246,7 @@ function buttonCallback(value) {
 			renderer.render( scene, camera );
 			stats.update();
 			controls.update();
-	}
+    	}
 
 	Start();
 	Animate();
