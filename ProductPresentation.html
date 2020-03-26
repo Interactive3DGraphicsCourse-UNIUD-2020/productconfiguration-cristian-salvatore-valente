@@ -394,33 +394,15 @@ function loadTexture(file) {
 		      }else{
 		        current--; };
 
-		        for ( var i = 0; i < objects.length; i ++ ) {
-		          var object = objects[ i ];
-
-		          object.remove( object );
-		          scene.remove( object );
-		        };
-
-		      var pointer = Mesh[current];
-
-		      var loader = new THREE.OBJLoader();
-
-		      loader.load("Objects/"+pointer,function(obj){
-
-		            obj.children.forEach(writeGeometry);
-
-		            function writeGeometry(children){
-		              var geometry = children.geometry;
-		              var shaderMat = new THREE.MeshBasicMaterial();
-		              var mesh = new THREE.Mesh( geometry, shaderMat );
-
-		              objects.push(mesh);
-		              scene.add( mesh );}
-		      });
-
-
-
-		    };
+						 for ( var i = 0; i < objects.length; i ++ ) {
+							 var object = objects[ i ];
+							  object.remove( object );
+								scene.remove( object );
+							};
+							var pointer = Mesh[current];
+							OBJ(pointer,1);
+						}
+					};
 
 		  }else if(value=="Next"){
 
@@ -441,20 +423,14 @@ function loadTexture(file) {
 
 		      var pointer = Mesh[current];
 
-					OBJ(pointer,2);
+					OBJ(pointer,1);
 
 		      }
 
-
-
-
-		  }else if(value=="Share"){
+			}else if(value=="Share"){
 		  }else if(value=="AddToCart"){
-		  }else if(value=="changeTexture"){
-		     }
-
-
-		  }
+		  }else if(value=="changeTexture"){}
+		}
 
 
 
