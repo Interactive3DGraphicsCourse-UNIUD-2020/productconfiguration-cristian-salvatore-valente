@@ -214,6 +214,7 @@ var objects = [];
 var Mesh = ["DoubleBlades","Katana","Axe","SwordSting"];
 var current;
 var currentCube="Cave";
+var type = 1;
 
 var BUTTONS = {
 	"back":"Back",
@@ -369,46 +370,63 @@ function loadTexture(file) {
 		function buttonCallback(value) {
 		  if(value=="Zoom"){
 
-		    return function () {
-		      for ( var i = 0; i < objects.length; i ++ ) {
-		        var object = objects[ i ];
-
-		        object.remove( object );
-		        scene.remove( object );
-		      }}
+		    return function () {}
 
 		  }else if(value=="BackZoom"){
+
+				return function () {}
+
 		  }else if(value=="RotateRight"){
+
+				return function () {}
+
 		  }else if(value=="RotateLeft"){
+
+				return function () {}
+
 		  }else if(value=="AddLike"){
+
+				return function(){
+						alert("Need to associate a facebook account to unlock this feature");
+					}
+
 		  }else if(value=="AddPrefer"){
+
+				return function () {}
+
 		  }else if(value=="Set2Light"){
+
+				return function () {}
+
 		  }else if(value=="Set3Light"){
+
+				return function () {}
+
 		  }else if(value=="Set1Light"){
+
+				return function () {}
+
 		  }else if(value=="Back"){
+				return function(){
 
-		    return function(){
+					if(current==0){
+						 current=3;
+					 }else{
+						 current--; };
 
-		      if(current==0){
-		        current=3;
-		      }else{
-		        current--; };
-
-						 for ( var i = 0; i < objects.length; i ++ ) {
+						for ( var i = 0; i < objects.length; i ++ ) {
 							 var object = objects[ i ];
-							  object.remove( object );
-								scene.remove( object );
-							};
-							var pointer = Mesh[current];
-							OBJ(pointer,1);
-						}
-					};
+							 object.remove( object );
+							 scene.remove( object );
+						 };
+						 var pointer = Mesh[current];
+						 OBJ(pointer);
+					 }
 
-		  }else if(value=="Next"){
+			}else if(value=="Next"){
 
-		    return function(){
-
-		      if(current==3){
+				return function(){
+					if(current==3){
 		        current=0;
 		      }else{
 		        current++; };
@@ -423,14 +441,45 @@ function loadTexture(file) {
 
 		      var pointer = Mesh[current];
 
-					OBJ(pointer,1);
+					OBJ(pointer);
 
 		      }
 
 			}else if(value=="Share"){
+
+				return function(){
+						alert("This function will be avaiable soon!");
+					}
+
 		  }else if(value=="AddToCart"){
-		  }else if(value=="changeTexture"){}
-		}
+
+				return function(){
+					  alert("Sorry at moment our server are busy, try later");
+					}
+
+		  }else if(value=="changeTexture"){
+
+				return function(){
+
+				if(type==1){
+					type=2;
+				}else{
+					type=1;
+				}
+
+				for ( var i = 0; i < objects.length; i ++ ) {
+					var object = objects[ i ];
+
+					object.remove( object );
+					scene.remove( object );
+				};
+
+			var pointer = Mesh[current];
+
+			OBJ(pointer);
+		};
+	}
+}
 
 
 
@@ -445,7 +494,7 @@ function Animate() {
 }
 
 
-function OBJ(objectName,type){
+function OBJ(objectName){
 	if(objectName=="DoubleBlades"){
 		objLoader(objectName,type,currentCube,0.3);
 	}else if(objectName=="Katana"){
