@@ -261,11 +261,12 @@ camera.position.z+= 20;
 
 
 createMenu();
+
 }
 
 
 
-	function objLoader(objectName,textureType,cubeMap,scaling){
+function objLoader(objectName,textureType,cubeMap,scaling){
 
 		var vShader = document.getElementById("vertex").textContent;
 		var fShader = document.getElementById("fragment").textContent;
@@ -350,25 +351,24 @@ function loadTexture(file) {
 		}
 
 
+function createMenu() {
 
-		function createMenu() {
+	for ( var i in BUTTONS ) {
 
-						for ( var i in BUTTONS ) {
-
-							var button = document.createElement( 'button' );
-
-		          button.setAttribute("id",BUTTONS[i]);
-							button.innerHTML = '<img src="Icons/'+i+'.png" style="width:30px;height:30px;" >';
-							menu.appendChild( button );
-		          button.addEventListener('click',buttonCallback(BUTTONS[i]),false);
-		        }
-		      }
+		var button = document.createElement( 'button'
+		button.setAttribute("id",BUTTONS[i]);
+		button.innerHTML = '<img src="Icons/'+i+'.png" style="width:30px;height:30px;" >';
+		menu.appendChild( button );
+		button.addEventListener('click',buttonCallback(BUTTONS[i]),false);
+	}
+}
 
 
 
 
-		function buttonCallback(value) {
-		  if(value=="Zoom"){
+function buttonCallback(value) {
+
+			if(value=="Zoom"){
 
 		    return function () {}
 
@@ -378,7 +378,9 @@ function loadTexture(file) {
 
 		  }else if(value=="RotateRight"){
 
-				return function () {}
+				return function () {
+
+				}
 
 		  }else if(value=="RotateLeft"){
 
