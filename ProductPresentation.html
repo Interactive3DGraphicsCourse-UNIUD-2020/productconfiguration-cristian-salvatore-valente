@@ -211,10 +211,7 @@ canvas {
 var scene, camera, renderer, controls, stats;
 var menu = document.getElementById( "menu" );
 var objects = [];
-var Mesh = ["DoubleBlades","Katana","Axe","SwordSting"];
-var current;
-var currentCube="Cave";
-var type = 1;
+var Mesh, current, currentCube, type ,angle,prefer,actualPosition;
 
 var BUTTONS = {
 	"back":"Back",
@@ -222,9 +219,7 @@ var BUTTONS = {
 	"shopping-cart": "AddToCart",
 	"like": "AddLike",
 	"rotate-right": "RotateLeft",
-	"maxifying-glass":"Zoom",
 	"change": "changeTexture",
-	"minifying-glass": "BackZoom",
 	"rotate-left": "RotateRight",
 	"light-bulb-1":"Set1Light",
 	"light-bulb-2":"Set2Light",
@@ -239,6 +234,13 @@ function Start() {
 	scene = new THREE.Scene();
 	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
 	current = 0;
+	objects = [];
+	Mesh = ["DoubleBlades","Katana","Axe","SwordSting"];
+	currentCube="Cave";
+	type = 1;
+	prefer = false;
+	angle = 0;
+	actualPosition= 25;
 
 
 	renderer = new THREE.WebGLRenderer( {antialias: true} );
@@ -256,8 +258,9 @@ function Start() {
 	document.body.appendChild( stats.domElement );
 
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	controls.enablePan = false;
 
-camera.position.z+= 20;
+	camera.position.z+= 20;
 
 
 createMenu();
@@ -288,7 +291,7 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 
 
 		var uniforms = {
-			pointLightPosition:{type:"v3", value: new THREE.Vector3()}, // in world space
+			pointLightPosition:{type:"v3", value: new THREE.Vector3(24,0,30)}, // in world space
 			clight:{type:"v3", value:new THREE.Color()},
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
@@ -355,7 +358,7 @@ function createMenu() {
 
 	for ( var i in BUTTONS ) {
 
-		var button = document.createElement( 'button'
+		var button = document.createElement( 'button');
 		button.setAttribute("id",BUTTONS[i]);
 		button.innerHTML = '<img src="Icons/'+i+'.png" style="width:30px;height:30px;" >';
 		menu.appendChild( button );
@@ -368,23 +371,48 @@ function createMenu() {
 
 function buttonCallback(value) {
 
-			if(value=="Zoom"){
+			// if(value=="Zoom"){
+			//
+		  //   return function () {
+			//
+			// 		actualPosition-=0.3;
+			// 		camera.position.z = actualPosition*Math.cos(angle);
+			//
+			// 		camera.position.x = actualPosition*Math.sin(angle);
+			//
+			// 	}
+			//
+		  // }else if(value=="BackZoom"){
+			//
+			// 	return function () {
+			//
+			// 		actualPosition+=0.3;
+			// 		camera.position.z = actualPosition*Math.cos(angle);
+			// 		camera.position.x = actualPosition*Math.sin(angle);
+			//
+			// 	}
+			//
+			//
+		  // }else
 
-		    return function () {}
-
-		  }else if(value=="BackZoom"){
-
-				return function () {}
-
-		  }else if(value=="RotateRight"){
+			if(value=="RotateRight"){
 
 				return function () {
 
+					if(angle>=360){angle = 0}else{angle+=1;};
+					camera.position.x = actualPosition*Math.sin(angle);
+					camera.position.z = actualPosition*Math.cos(angle);
+					camera.lookAt(0,0,0);
 				}
 
 		  }else if(value=="RotateLeft"){
 
-				return function () {}
+					return function () {
+						if(angle<=0){angle = 360}else{angle-=1;};
+						camera.position.x = actualPosition*Math.sin(angle);
+						camera.position.z = actualPosition*Math.cos(angle);
+						camera.lookAt(0,0,0);
+				}
 
 		  }else if(value=="AddLike"){
 
@@ -394,7 +422,27 @@ function buttonCallback(value) {
 
 		  }else if(value=="AddPrefer"){
 
-				return function () {}
+				return function () {
+					if (prefer){
+
+						var strMessage1 = document.getElementById("AddPrefer") ;
+
+						strMessage1.innerHTML = strMessage1.innerHTML.replace(/./g, '');
+						strMessage1.innerHTML = ' ';
+						strMessage1.innerHTML = strMessage1.innerHTML.replace(/ /g, '<img src="Icons/heart.png" style="width:30px;height:30px">');
+						prefer = false;
+
+					}else{
+						var strMessage1 = document.getElementById("AddPrefer") ;
+						strMessage1.innerHTML = strMessage1.innerHTML.replace(/./g, ' ');
+						strMessage1.innerHTML = ' ';
+						strMessage1.innerHTML = strMessage1.innerHTML.replace(/ /g, '<img src="Icons/heartOn.png" style="width:30px;height:30px">');
+
+						prefer = true;
+
+					}
+
+				}
 
 		  }else if(value=="Set2Light"){
 
@@ -423,6 +471,8 @@ function buttonCallback(value) {
 						 };
 						 var pointer = Mesh[current];
 						 OBJ(pointer);
+						 camera.position.set(0,0,25);
+						 camera.lookAt(0,0,0);
 					 }
 
 			}else if(value=="Next"){
@@ -444,6 +494,8 @@ function buttonCallback(value) {
 		      var pointer = Mesh[current];
 
 					OBJ(pointer);
+					camera.position.set(0,0,25);
+					camera.lookAt(0,0,0);
 
 		      }
 
