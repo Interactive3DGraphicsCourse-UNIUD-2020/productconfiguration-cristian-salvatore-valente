@@ -208,10 +208,11 @@ canvas {
 <script  type="module">
 
 
-var scene, camera, renderer, controls, stats;
+var scene, camera, renderer, controls, stats,actualPosition;
 var menu = document.getElementById( "menu" );
 var objects = [];
-var Mesh, current, currentCube, type ,angle,prefer,actualPosition;
+var Mesh, current, currentCube, type ,angle,prefer;
+var light1,light2,light3,uniforms;
 
 var BUTTONS = {
 	"back":"Back",
@@ -290,8 +291,8 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 			] );
 
 
-		var uniforms = {
-			pointLightPosition:{type:"v3", value: new THREE.Vector3(24,0,30)}, // in world space
+			uniforms = {
+			pointLightPosition:{type:"v3", value: new THREE.Vector3(5,5,5)}, // in world space
 			clight:{type:"v3", value:new THREE.Color()},
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
@@ -300,7 +301,7 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 			normalMap:{type:"t", value: normalTxtr},
 			normalScale:{type:"v2", value: new THREE.Vector2(2,2)},
 			aoMap:{type:"t", value: occlusionTxtr},
-			ambientLight:{type:"v3", value:new THREE.Vector3()},
+			ambientLight:{type:"v3", value:new THREE.Vector3(0,0,0)},
 			envMap:{type:"t", value: textureCube}
 
 		}
@@ -454,7 +455,9 @@ function buttonCallback(value) {
 
 		  }else if(value=="Set1Light"){
 
-				return function () {}
+				return function () {
+					uniforms.ambientLight.value= new THREE.Vector3(2,2,2);
+				}
 
 		  }else if(value=="Back"){
 				return function(){
