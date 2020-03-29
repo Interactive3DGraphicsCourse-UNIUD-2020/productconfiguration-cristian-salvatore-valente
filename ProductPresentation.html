@@ -293,7 +293,7 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 
 			uniforms = {
 			pointLightPosition:{type:"v3", value: new THREE.Vector3(5,5,5)}, // in world space
-			clight:{type:"v3", value:new THREE.Color()},
+			clight:{type:"v3", value:new THREE.Vector3(1,1,1)},
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
 			roughnessMap:{type:"t", value: rougTxt},
