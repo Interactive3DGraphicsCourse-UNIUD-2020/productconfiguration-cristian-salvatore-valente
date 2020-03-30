@@ -74,144 +74,138 @@ canvas {
 
 
 <script type="text/x-glsl" id="fragment">
-varying vec3 vNormal;
-varying vec3 vPosition;
-varying vec3 wPosition;
-varying vec2 uVv;
 
-uniform vec3 pointLightPosition[3]; // in world space
-uniform vec3 clight[3];
+	varying vec3 vNormal;
+	varying vec3 vPosition;
+	varying vec3 wPosition;
+	varying vec2 uVv;
 
-uniform vec3 ambientLight;
-uniform sampler2D aoMap;
+	uniform vec3 pointLightPosition[3]; // in world space
+	uniform vec3 clight[3];
 
-uniform sampler2D specularMap;
-uniform sampler2D diffuseMap;
-uniform sampler2D roughnessMap;
-uniform vec2 textureRepeat;
+	uniform vec3 ambientLight;
+	uniform sampler2D aoMap;
 
-uniform sampler2D normalMap;
-uniform vec2 normalScale;
+	uniform sampler2D specularMap;
+	uniform sampler2D diffuseMap;
+	uniform sampler2D roughnessMap;
+	uniform vec2 textureRepeat;
 
-
-uniform samplerCube envMap;
-
-const float PI = 3.14159;
-
-vec3 cdiff;
-vec3 cspec;
-float roughness;
-
-vec3 FSchlick(float lDoth) {
-	return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
-}
-
-float DGGX(float nDoth, float alpha) {
-	float alpha2 = alpha*alpha;
-	float d = nDoth*nDoth*(alpha2-1.0)+1.0;
-	return (  alpha2 / (PI*d*d));
-}
-
-float G1(float dotProduct, float k) {
-	return (dotProduct / (dotProduct*(1.0-k) + k) );
-}
-
-float GSmith(float nDotv, float nDotl) {
-		float k = roughness*roughness;
-		return G1(nDotl,k)*G1(nDotv,k);
-}
-
-#extension GL_OES_standard_derivatives : enable
-
-vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {
-
-vec3 q0 = dFdx( eye_pos.xyz );
-vec3 q1 = dFdy( eye_pos.xyz );
-vec2 st0 = dFdx( uVv.st );
-vec2 st1 = dFdy( uVv.st );
-
-vec3 S = normalize(  q0 * st1.t - q1 * st0.t );
-vec3 T = normalize( -q0 * st1.s + q1 * st0.s );
-vec3 N =  surf_norm ;
-
-vec3 mapN = normalize(texture2D( normalMap, uVv ).xyz * 2.0 - 1.0);
-mapN.xy = normalScale * mapN.xy;
-mat3 tsn = mat3( S, T, N );
-return normalize( tsn * mapN );
-
-}
-
-vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
-return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
-}
-
-void main() {
-
-	/*BRDF section*/
-	// small quantity to prevent divisions by 0
-	float nDotl ;
-	float lDoth ;
-	float nDoth ;
-	float vDoth ;
-	float nDotv ;
-	vec3 light ;
-
-	vec3 v = normalize( -vPosition);
-	vec3 n = perturbNormal2Arb( vPosition,normalize(vNormal));
-
-for(int i =0;i<1;i++){
-
-	vec4 lPosition = viewMatrix * vec4( pointLightPosition[i], 1.0 );
-	vec3 l = normalize(lPosition.xyz - vPosition.xyz);
-	vec3 h = normalize( v + l);
-	light += clight[i];
+	uniform sampler2D normalMap;
+	uniform vec2 normalScale;
 
 
-	 nDotl += max(dot( n, l ),0.000001);
-	 lDoth += max(dot( l, h ),0.000001);
-	 nDoth += max(dot( n, h ),0.000001);
-	 vDoth += max(dot( v, h ),0.000001);
-	 nDotv += max(dot( n, v ),0.000001);
+	uniform samplerCube envMap;
+
+	const float PI = 3.14159;
+
+	vec3 cdiff;
+	vec3 cspec;
+	float roughness;
+
+	vec3 FSchlick(float lDoth) {
+		return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
+	}
+
+	float DGGX(float nDoth, float alpha) {
+		float alpha2 = alpha*alpha;
+		float d = nDoth*nDoth*(alpha2-1.0)+1.0;
+		return (  alpha2 / (PI*d*d));
+	}
+
+	float G1(float dotProduct, float k) {
+		return (dotProduct / (dotProduct*(1.0-k) + k) );
+	}
+
+	float GSmith(float nDotv, float nDotl) {
+			float k = roughness*roughness;
+			return G1(nDotl,k)*G1(nDotv,k);
+	}
+
+	#extension GL_OES_standard_derivatives : enable
+
+	vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {
+
+	vec3 q0 = dFdx( eye_pos.xyz );
+	vec3 q1 = dFdy( eye_pos.xyz );
+	vec2 st0 = dFdx( uVv.st );
+	vec2 st1 = dFdy( uVv.st );
+
+	vec3 S = normalize(  q0 * st1.t - q1 * st0.t );
+	vec3 T = normalize( -q0 * st1.s + q1 * st0.s );
+	vec3 N =  surf_norm ;
+
+	vec3 mapN = normalize(texture2D( normalMap, uVv ).xyz * 2.0 - 1.0);
+	mapN.xy = normalScale * mapN.xy;
+	mat3 tsn = mat3( S, T, N );
+	return normalize( tsn * mapN );
 
 }
 
-	cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
-	// texture in sRGB, linearize
-	cdiff = pow( cdiff, vec3(2.2));
-	cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
-	// texture in sRGB, linearize
-	cspec = pow( cspec, vec3(2.2));
-	roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
-
-	vec3 fresnel = FSchlick(lDoth);
-	vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI +
-						 fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
-
-
-	/* enviromentMapping section*/
-	vec3 worldN = inverseTransformDirection( n, viewMatrix );
-	vec3 worldV = cameraPosition - wPosition ;
-	vec3 r = normalize( reflect(-worldV,worldN));
-
-	vec3 irradiance = textureCube( envMap, worldN).rgb;
-	// texture in sRGB, linearize
-	irradiance = pow( irradiance, vec3(2.2));
-
-	vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
-	// texture in sRGB, linearize
-	envLight = pow( envLight, vec3(2.2));
-
-
-
-
-	vec3 outRadiance =  PI* light * nDotl * BRDF
-						+ ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
-						+ cdiff*irradiance
-						+ fresnel*envLight;
-
-	// gamma encode the final value
-	gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+	vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+	return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
 }
+
+	void main() {
+
+		vec3 n = perturbNormal2Arb( vPosition,normalize(vNormal));
+		vec3 v = normalize( -vPosition);
+		float nDotv = max(dot( n, v ),0.000001);
+		vec3 BRDFTot ;
+		vec3 fresnelTot;
+
+		for(int i=0;i<3;i++){
+
+			vec4 lPosition = viewMatrix * vec4( pointLightPosition[i], 1.0 );
+			vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+			vec3 h = normalize( v + l);
+				/*BRDF section*/
+			// small quantity to prevent divisions by 0
+			float nDotl = max(dot( n, l ),0.000001);
+			float lDoth = max(dot( l, h ),0.000001);
+			float nDoth = max(dot( n, h ),0.000001);
+			float vDoth = max(dot( v, h ),0.000001);
+
+			vec3 fresnel = FSchlick(lDoth);
+			vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
+
+			BRDFTot += BRDF*clight[i]*nDotl;
+			fresnelTot+= fresnel;
+
+		}
+
+
+
+		cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
+		// texture in sRGB, linearize
+		cdiff = pow( cdiff, vec3(2.2));
+		cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
+		// texture in sRGB, linearize
+		cspec = pow( cspec, vec3(2.2));
+		roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
+
+
+		/* enviromentMapping section*/
+		vec3 worldN = inverseTransformDirection( n, viewMatrix );
+		vec3 worldV = cameraPosition - wPosition ;
+		vec3 r = normalize( reflect(-worldV,worldN));
+
+		vec3 irradiance = textureCube( envMap, worldN).rgb;
+		// texture in sRGB, linearize
+		irradiance = pow( irradiance, vec3(2.2));
+
+		vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
+		// texture in sRGB, linearize
+		envLight = pow( envLight, vec3(2.2));
+
+		vec3 outRadiance =  PI * BRDFTot
+												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
+												+ cdiff*irradiance
+												+	fresnelTot*envLight;
+
+		// gamma encode the final value
+		gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+	}
 </script>
 
 
@@ -246,10 +240,10 @@ function Start() {
 
 	scene = new THREE.Scene();
 	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
-	current = 0;
+	current = 1;
 	objects = [];
 	Mesh = ["DoubleBlades","Katana","Axe","SwordSting"];
-	currentCube="Cave";
+	currentCube="GreenGrass";
 	type = 1;
 	prefer = false;
 	angle = 0;
@@ -282,7 +276,7 @@ createMenu();
 
 
 
-function objLoader(objectName,textureType,cubeMap,scaling){
+function objLoader(objectName,textureType,cubeMap,scaling,globalPosition,rotation){
 
 		var vShader = document.getElementById("vertex").textContent;
 		var fShader = document.getElementById("fragment").textContent;
@@ -304,9 +298,8 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 
 
 			uniforms = {
-			pointLightPosition:{type:"v3", value: [new THREE.Vector3(-5,5,5),new THREE.Vector3(5,-5,5),new THREE.Vector3(5,5,-5)] }, // in world space
-			clight:{type:"v3", value: [new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,0)] },
-
+			pointLightPosition:{type:"v3", value: [new THREE.Vector3(0,0,0),new THREE.Vector3(0,10,-25),new THREE.Vector3(15,3,25)]}, // in world space
+			clight:{type:"v3", value: [new THREE.Vector3(0,0,0),new THREE.Vector3(1.5,1.5,1.5),new THREE.Vector3(1,1,1)]},
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
 			roughnessMap:{type:"t", value: rougTxt},
@@ -314,7 +307,7 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 			normalMap:{type:"t", value: normalTxtr},
 			normalScale:{type:"v2", value: new THREE.Vector2(2,2)},
 			aoMap:{type:"t", value: occlusionTxtr},
-			ambientLight:{type:"v3", value:new THREE.Vector3(10,10,10)},
+			ambientLight:{type:"v3", value:new THREE.Vector3(0.5,0.5,0.5)},
 			envMap:{type:"t", value: textureCube}
 
 		}
@@ -337,7 +330,8 @@ function objLoader(objectName,textureType,cubeMap,scaling){
 						var geometry = children.geometry;
 						var mesh = new THREE.Mesh( geometry, shaderMat );
 						mesh.scale.set(scaling,scaling,scaling);
-						// mesh.position.set(globalPosition.x,globalPosition.y,globalPosition.z);
+						mesh.position.set(globalPosition.x,globalPosition.y,globalPosition.z);
+						mesh.rotation.set(rotation.x,rotation.y,rotation.z);
 
 
 						scene.add( mesh );
@@ -384,30 +378,6 @@ function createMenu() {
 
 
 function buttonCallback(value) {
-
-			// if(value=="Zoom"){
-			//
-		  //   return function () {
-			//
-			// 		actualPosition-=0.3;
-			// 		camera.position.z = actualPosition*Math.cos(angle);
-			//
-			// 		camera.position.x = actualPosition*Math.sin(angle);
-			//
-			// 	}
-			//
-		  // }else if(value=="BackZoom"){
-			//
-			// 	return function () {
-			//
-			// 		actualPosition+=0.3;
-			// 		camera.position.z = actualPosition*Math.cos(angle);
-			// 		camera.position.x = actualPosition*Math.sin(angle);
-			//
-			// 	}
-			//
-			//
-		  // }else
 
 			if(value=="RotateRight"){
 
@@ -563,16 +533,17 @@ function Animate() {
 		controls.update();
 }
 
+var gradi = Math.PI/180;
 
 function OBJ(objectName){
 	if(objectName=="DoubleBlades"){
-		objLoader(objectName,type,currentCube,0.3);
+		objLoader(objectName,type,currentCube,0.1,new THREE.Vector3(0,-10,0),new THREE.Vector3(0,0,0));
 	}else if(objectName=="Katana"){
-		objLoader(objectName,type,currentCube,0.9);
+		objLoader(objectName,type,currentCube,0.9,new THREE.Vector3(0,0,0),new THREE.Vector3(0.6,0.6,0));
 	}else if(objectName=="Axe"){
-		objLoader(objectName,type,currentCube,1);
+		objLoader(objectName,type,currentCube,1,new THREE.Vector3(0,0,0),new THREE.Vector3(0,180*gradi,0));
 	}else if(objectName=="SwordSting"){
-		objLoader(objectName,type,currentCube,1);
+		objLoader(objectName,type,currentCube,0.7,new THREE.Vector3(0,0,-10),new THREE.Vector3(-150*gradi,0,0));
 	}
 }
 
