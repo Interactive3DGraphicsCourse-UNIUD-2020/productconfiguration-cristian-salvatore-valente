@@ -69,7 +69,7 @@ canvas {
     vNormal = normalMatrix * normal;
     uVv = uv;
     gl_Position = projectionMatrix * vPos;
-}
+	}
  </script>
 
 
@@ -93,7 +93,6 @@ canvas {
 
 	uniform sampler2D normalMap;
 	uniform vec2 normalScale;
-
 
 	uniform samplerCube envMap;
 
@@ -139,20 +138,41 @@ canvas {
 	mapN.xy = normalScale * mapN.xy;
 	mat3 tsn = mat3( S, T, N );
 	return normalize( tsn * mapN );
-
-}
+	}
 
 	vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
-	return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
-}
+	return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );}
 
 	void main() {
 
 		vec3 n = perturbNormal2Arb( vPosition,normalize(vNormal));
 		vec3 v = normalize( -vPosition);
 		float nDotv = max(dot( n, v ),0.000001);
+
 		vec3 BRDFTot ;
 		vec3 fresnelTot;
+
+		cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
+		// texture in sRGB, linearize
+		cdiff = pow( cdiff, vec3(2.2));
+		cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
+		// texture in sRGB, linearize
+		cspec = pow( cspec, vec3(2.2));
+		roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
+
+		/* enviromentMapping section*/
+		vec3 worldN = inverseTransformDirection( n, viewMatrix );
+		vec3 worldV = cameraPosition - wPosition ;
+		vec3 r = normalize( reflect(-worldV,worldN));
+
+		vec3 irradiance = textureCube( envMap, worldN).rgb;
+		// texture in sRGB, linearize
+		irradiance = pow( irradiance, vec3(2.2));
+
+		vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
+		// texture in sRGB, linearize
+		envLight = pow( envLight, vec3(3.2));
+
 
 		for(int i=0;i<3;i++){
 
@@ -174,30 +194,6 @@ canvas {
 
 		}
 
-
-
-		cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
-		// texture in sRGB, linearize
-		cdiff = pow( cdiff, vec3(2.2));
-		cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
-		// texture in sRGB, linearize
-		cspec = pow( cspec, vec3(2.2));
-		roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
-
-
-		/* enviromentMapping section*/
-		vec3 worldN = inverseTransformDirection( n, viewMatrix );
-		vec3 worldV = cameraPosition - wPosition ;
-		vec3 r = normalize( reflect(-worldV,worldN));
-
-		vec3 irradiance = textureCube( envMap, worldN).rgb;
-		// texture in sRGB, linearize
-		irradiance = pow( irradiance, vec3(2.2));
-
-		vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
-		// texture in sRGB, linearize
-		envLight = pow( envLight, vec3(2.2));
-
 		vec3 outRadiance =  PI * BRDFTot
 												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
 												+ cdiff*irradiance
@@ -217,8 +213,9 @@ canvas {
 var scene, camera, renderer, controls, stats,actualPosition;
 var menu = document.getElementById( "menu" );
 var objects = [];
-var Mesh, current, currentCube, type ,angle,prefer;
-var light1,light2,light3,uniforms;
+var meshList, current, currentCube, type ,angle,prefer;
+var light1,light2,light3, uniforms;
+
 
 var BUTTONS = {
 	"back":"Back",
@@ -242,12 +239,13 @@ function Start() {
 	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
 	current = 1;
 	objects = [];
-	Mesh = ["DoubleBlades","Katana","Axe","SwordSting"];
+	meshList = ["DoubleBlades","Katana","Axe","SwordSting"];
 	currentCube="GreenGrass";
 	type = 1;
 	prefer = false;
 	angle = 0;
 	actualPosition= 25;
+
 
 
 	renderer = new THREE.WebGLRenderer( {antialias: true} );
@@ -268,10 +266,7 @@ function Start() {
 	controls.enablePan = false;
 
 	camera.position.z+= 20;
-
-
-createMenu();
-
+	createMenu();
 }
 
 
@@ -297,9 +292,10 @@ function objLoader(objectName,textureType,cubeMap,scaling,globalPosition,rotatio
 			] );
 
 
-			uniforms = {
-			pointLightPosition:{type:"v3", value: [new THREE.Vector3(0,0,0),new THREE.Vector3(0,10,-25),new THREE.Vector3(15,3,25)]}, // in world space
-			clight:{type:"v3", value: [new THREE.Vector3(0,0,0),new THREE.Vector3(1.5,1.5,1.5),new THREE.Vector3(1,1,1)]},
+
+		uniforms = {
+			pointLightPosition:{type:"v3", value: [new THREE.Vector3(10,-20,0),new THREE.Vector3(20,5,0),new THREE.Vector3(0,-20,30)]}, // in world space
+			clight:{type:"v3", value: [light1,light2,light3]},
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
 			roughnessMap:{type:"t", value: rougTxt},
@@ -307,12 +303,9 @@ function objLoader(objectName,textureType,cubeMap,scaling,globalPosition,rotatio
 			normalMap:{type:"t", value: normalTxtr},
 			normalScale:{type:"v2", value: new THREE.Vector2(2,2)},
 			aoMap:{type:"t", value: occlusionTxtr},
-			ambientLight:{type:"v3", value:new THREE.Vector3(0.5,0.5,0.5)},
+			ambientLight:{type:"v3", value:new THREE.Vector3(0,0,0)},
 			envMap:{type:"t", value: textureCube}
-
 		}
-
-
 
 		var shaderMat = new THREE.ShaderMaterial({
 			uniforms: uniforms,
@@ -332,16 +325,12 @@ function objLoader(objectName,textureType,cubeMap,scaling,globalPosition,rotatio
 						mesh.scale.set(scaling,scaling,scaling);
 						mesh.position.set(globalPosition.x,globalPosition.y,globalPosition.z);
 						mesh.rotation.set(rotation.x,rotation.y,rotation.z);
-
-
 						scene.add( mesh );
 					 	objects.push(mesh);}
 				});
 
-		// uniforms.pointLightPosition.value = directedLight;
-		// uniforms.ambientLight.value = ambientLight;
 
-	}
+			}
 
 
 
@@ -430,17 +419,41 @@ function buttonCallback(value) {
 
 		  }else if(value=="Set2Light"){
 
-				return function () {}
+				return function () {
+					var spento = new THREE.Vector3(0,0,0);
+					if(uniforms.clight.value[1] == spento) {
+							uniforms.clight.value = [uniforms.clight.value[0],light2,uniforms.clight.value[2]];
+					}else{
+							uniforms.clight.value = [uniforms.clight.value[0],spento,uniforms.clight.value[2]];
+						}
+				};
 
 		  }else if(value=="Set3Light"){
 
-				return function () {}
+				return function () {
+					var spento = new THREE.Vector3(0,0,0);
+
+					if(uniforms.clight.value[2] == spento) {
+							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],light3];
+					}else{
+							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],spento];
+						}
+				};
+
+
 
 		  }else if(value=="Set1Light"){
 
 				return function () {
-					uniforms.ambientLight.value= new THREE.Vector3(2,2,2);
-				}
+					var spento = new THREE.Vector3(0,0,0);
+
+					if(uniforms.clight.value[0] == spento) {
+							uniforms.clight.value = [light1,uniforms.clight.value[1],uniforms.clight.value[2]];
+					}else{
+							uniforms.clight.value = [spento,uniforms.clight.value[1],uniforms.clight.value[2]];
+				};
+			};
+
 
 		  }else if(value=="Back"){
 				return function(){
@@ -455,7 +468,7 @@ function buttonCallback(value) {
 							 object.remove( object );
 							 scene.remove( object );
 						 };
-						 var pointer = Mesh[current];
+						 var pointer = meshList[current];
 						 OBJ(pointer);
 						 camera.position.set(0,0,25);
 						 camera.lookAt(0,0,0);
@@ -477,7 +490,7 @@ function buttonCallback(value) {
 		          scene.remove( object );
 		        };
 
-		      var pointer = Mesh[current];
+		      var pointer = meshList[current];
 
 					OBJ(pointer);
 					camera.position.set(0,0,25);
@@ -514,7 +527,7 @@ function buttonCallback(value) {
 					scene.remove( object );
 				};
 
-			var pointer = Mesh[current];
+			var pointer = meshList[current];
 
 			OBJ(pointer);
 		};
@@ -533,16 +546,30 @@ function Animate() {
 		controls.update();
 }
 
-var gradi = Math.PI/180;
 
 function OBJ(objectName){
+
+
+	var gradi = Math.PI/180;
 	if(objectName=="DoubleBlades"){
+		light1 = new THREE.Vector3(25,0,0);
+		light2 = new THREE.Vector3(0,0,0);
+		light3 = new THREE.Vector3(0,0,0);
 		objLoader(objectName,type,currentCube,0.1,new THREE.Vector3(0,-10,0),new THREE.Vector3(0,0,0));
 	}else if(objectName=="Katana"){
+		light1 = new THREE.Vector3(0,0,20);
+		light2 = new THREE.Vector3(0,0,0);
+		light3 = new THREE.Vector3(0,0,0);
 		objLoader(objectName,type,currentCube,0.9,new THREE.Vector3(0,0,0),new THREE.Vector3(0.6,0.6,0));
 	}else if(objectName=="Axe"){
-		objLoader(objectName,type,currentCube,1,new THREE.Vector3(0,0,0),new THREE.Vector3(-45*gradi,-25*gradi,-90*gradi));
+		light1 = new THREE.Vector3(10,0,0);
+		light2 = new THREE.Vector3(0,0,10);
+		light3 = new THREE.Vector3(0,10,0);
+		objLoader(objectName,type,currentCube,1,new THREE.Vector3(-5,0,0),new THREE.Vector3(-45*gradi,-25*gradi,-90*gradi));
 	}else if(objectName=="SwordSting"){
+		light1 = new THREE.Vector3(0,20,20);
+		light2 = new THREE.Vector3(0,0,0);
+		light3 = new THREE.Vector3(0,0,0);
 		objLoader(objectName,type,currentCube,0.7,new THREE.Vector3(0,0,-10),new THREE.Vector3(-150*gradi,0,0));
 	}
 }
