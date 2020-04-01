@@ -216,6 +216,8 @@ var objects = [];
 var meshList, current, currentCube, type ,angle,prefer;
 var light1,light2,light3, uniforms;
 
+var spento = new THREE.Vector3(0,0,0);
+
 
 var BUTTONS = {
 	"back":"Back",
@@ -419,9 +421,11 @@ function buttonCallback(value) {
 
 		  }else if(value=="Set2Light"){
 
+
+
 				return function () {
-					var spento = new THREE.Vector3(0,0,0);
-					if(uniforms.clight.value[1] == spento) {
+
+					if(uniforms.clight.value[1] == spento){
 							uniforms.clight.value = [uniforms.clight.value[0],light2,uniforms.clight.value[2]];
 					}else{
 							uniforms.clight.value = [uniforms.clight.value[0],spento,uniforms.clight.value[2]];
@@ -431,12 +435,12 @@ function buttonCallback(value) {
 		  }else if(value=="Set3Light"){
 
 				return function () {
-					var spento = new THREE.Vector3(0,0,0);
 
 					if(uniforms.clight.value[2] == spento) {
 							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],light3];
 					}else{
 							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],spento];
+
 						}
 				};
 
@@ -445,7 +449,6 @@ function buttonCallback(value) {
 		  }else if(value=="Set1Light"){
 
 				return function () {
-					var spento = new THREE.Vector3(0,0,0);
 
 					if(uniforms.clight.value[0] == spento) {
 							uniforms.clight.value = [light1,uniforms.clight.value[1],uniforms.clight.value[2]];
@@ -533,6 +536,8 @@ function buttonCallback(value) {
 		};
 	}
 }
+
+
 
 
 
