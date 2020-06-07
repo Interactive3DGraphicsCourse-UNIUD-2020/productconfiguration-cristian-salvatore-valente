@@ -196,8 +196,8 @@ canvas {
 
 		vec3 outRadiance =  PI * BRDFTot
 												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
-												+ cdiff*irradiance
-												+	fresnelTot*envLight;
+												+ cdiff*irradiance*ambientLight
+												+	fresnelTot*envLight*ambientLight;
 
 		// gamma encode the final value
 		gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
@@ -215,8 +215,9 @@ var menu = document.getElementById( "menu" );
 var objects = [];
 var meshList, current, currentMap, type ,angle,prefer;
 var light1,light2,light3, uniforms;
+var light1pos,light2pos,light3pos;
 
-var spento,BUTTONS ,maps,gotBackground ;
+var spento,BUTTONS ,maps,gotBackground,ambientIntensity;
 
 
 function Start() {
@@ -234,24 +235,26 @@ function Start() {
 	gotBackground = false;
 	spento = new THREE.Vector3(0,0,0);
 
+
 	BUTTONS = {
 		"back":"Back",
 		"heart":"AddPrefer",
 		"shopping-cart": "AddToCart",
 		"like": "AddLike",
 		"share": "Share",
+		"sun-on": "Ambient",
 		"rotate-right": "RotateLeft",
 		"change": "changeTexture",
 		"rotate-left": "RotateRight",
-		"light-bulb-1":"Set1Light",
-		"light-bulb-2":"Set2Light",
-		"light-bulb-3":"Set3Light",
+		"light-bulb-on-1":"Set1Light",
+		"light-bulb-on-2":"Set2Light",
+		"light-bulb-on-3":"Set3Light",
 		"image":"showMap",
 		"changeCube":"changeMap",
 		"next":"Next"
 	};
 
-	maps = ["AutumnForest","Cave","GreenGrass","Room","RockDesert",""]
+	maps = ["AutumnForest","Cave","GreenGrass","Room","RockDesert"]
 
 
 
@@ -278,7 +281,7 @@ function Start() {
 
 
 
-function objLoader(objectName,textureType,scaling,globalPosition,rotation,ambientIntensity){
+function objLoader(objectName,textureType,scaling,globalPosition,rotation){
 
 		var vShader = document.getElementById("vertex").textContent;
 		var fShader = document.getElementById("fragment").textContent;
@@ -303,7 +306,7 @@ function objLoader(objectName,textureType,scaling,globalPosition,rotation,ambien
 
 
 		uniforms = {
-			pointLightPosition:{type:"v3", value: [new THREE.Vector3(10,-20,0),new THREE.Vector3(20,5,0),new THREE.Vector3(0,-20,30)]}, // in world space
+			pointLightPosition:{type:"v3", value: [light1pos,light2pos,light3pos]}, // in world space
 			clight:{type:"v3", value: [light1,light2,light3]},
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
@@ -312,7 +315,7 @@ function objLoader(objectName,textureType,scaling,globalPosition,rotation,ambien
 			normalMap:{type:"t", value: normalTxtr},
 			normalScale:{type:"v2", value: new THREE.Vector2(2,2)},
 			aoMap:{type:"t", value: occlusionTxtr},
-			ambientLight:{type:"v3", value:new THREE.Vector3(0.1,0.1,0.1)},
+			ambientLight:{type:"v3", value: ambientIntensity},
 			envMap:{type:"t", value: textureCube}
 		}
 
@@ -424,7 +427,7 @@ function buttonCallback(value) {
 		  }else if(value=="changeMap"){
 
 				return function(){
-					if(currentMap>4){
+					if(currentMap>3){
 						currentMap=0;
 					}else{currentMap++;}
 
@@ -434,7 +437,30 @@ function buttonCallback(value) {
 
 				}
 
-		  }else if(value=="AddLike"){
+			}else if(value=="Ambient"){
+
+				return function(){
+					if(uniforms.ambientLight.value == spento){
+
+						var strMessage = document.getElementById("Ambient") ;
+
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun-on.png" style="width:30px;height:30px">');
+
+						uniforms.ambientLight.value = ambientIntensity;
+
+						}else{
+
+							var strMessage = document.getElementById("Ambient") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, ' ');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun.png" style="width:30px;height:30px">');
+							uniforms.ambientLight.value = spento;
+						}
+				}
+
+			}else if(value=="AddLike"){
 
 				return function(){
 						alert("Need to associate a facebook account to unlock this feature");
@@ -445,18 +471,18 @@ function buttonCallback(value) {
 				return function () {
 					if (prefer){
 
-						var strMessage1 = document.getElementById("AddPrefer") ;
+						var strMessage = document.getElementById("AddPrefer") ;
 
-						strMessage1.innerHTML = strMessage1.innerHTML.replace(/./g, '');
-						strMessage1.innerHTML = ' ';
-						strMessage1.innerHTML = strMessage1.innerHTML.replace(/ /g, '<img src="Icons/heart.png" style="width:30px;height:30px">');
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/heart.png" style="width:30px;height:30px">');
 						prefer = false;
 
 					}else{
-						var strMessage1 = document.getElementById("AddPrefer") ;
-						strMessage1.innerHTML = strMessage1.innerHTML.replace(/./g, ' ');
-						strMessage1.innerHTML = ' ';
-						strMessage1.innerHTML = strMessage1.innerHTML.replace(/ /g, '<img src="Icons/heartOn.png" style="width:30px;height:30px">');
+						var strMessage = document.getElementById("AddPrefer") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, ' ');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/heartOn.png" style="width:30px;height:30px">');
 
 						prefer = true;
 
@@ -471,9 +497,21 @@ function buttonCallback(value) {
 				return function () {
 
 					if(uniforms.clight.value[1] == spento){
+
+							var strMessage = document.getElementById("Set2Light") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-2.png" style="width:30px;height:30px">');
+
 							uniforms.clight.value = [uniforms.clight.value[0],light2,uniforms.clight.value[2]];
 					}else{
-							uniforms.clight.value = [uniforms.clight.value[0],spento,uniforms.clight.value[2]];
+
+						var strMessage = document.getElementById("Set2Light") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-2.png" style="width:30px;height:30px">');
+
+						uniforms.clight.value = [uniforms.clight.value[0],spento,uniforms.clight.value[2]];
 						}
 				};
 
@@ -482,8 +520,20 @@ function buttonCallback(value) {
 				return function () {
 
 					if(uniforms.clight.value[2] == spento) {
+						var strMessage = document.getElementById("Set3Light") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-3.png" style="width:30px;height:30px">');
+
 							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],light3];
 					}else{
+
+
+							var strMessage = document.getElementById("Set3Light") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-3.png" style="width:30px;height:30px">');
+
 							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],spento];
 
 						}
@@ -496,8 +546,23 @@ function buttonCallback(value) {
 				return function () {
 
 					if(uniforms.clight.value[0] == spento) {
-							uniforms.clight.value = [light1,uniforms.clight.value[1],uniforms.clight.value[2]];
+
+						var strMessage = document.getElementById("Set1Light") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-1.png" style="width:30px;height:30px">');
+
+						uniforms.clight.value = [light1,uniforms.clight.value[1],uniforms.clight.value[2]];
+
 					}else{
+
+
+
+							var strMessage = document.getElementById("Set1Light") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-1.png" style="width:30px;height:30px">');
+
 							uniforms.clight.value = [spento,uniforms.clight.value[1],uniforms.clight.value[2]];
 				};
 			};
@@ -602,31 +667,54 @@ function OBJ(objectName){
 
 	var gradi = Math.PI/180;
 	if(objectName=="DoubleBlades"){
-		light1 = new THREE.Vector3(25,0,0);
-		light2 = new THREE.Vector3(0,0,0);
-		light3 = new THREE.Vector3(0,0,0);
+		light1 = new THREE.Vector3(0.5,0.5,0.5);
+		light2 = new THREE.Vector3(5,5,7);
+		light3 = new THREE.Vector3(7,5,5);
+		light1pos = new THREE.Vector3(5,0,50);
+		light2pos = new THREE.Vector3(10,0,0);
+		light3pos = new THREE.Vector3(-10,5,0);
+		ambientIntensity= new THREE.Vector3(2,2,2);
 		objLoader(objectName,type,0.1,new THREE.Vector3(0,-10,0),new THREE.Vector3(0,0,0));
 	}else if(objectName=="Katana"){
-		light1 = new THREE.Vector3(0,0,20);
-		light2 = new THREE.Vector3(0,0,0);
-		light3 = new THREE.Vector3(0,0,0);
+		light1 = new THREE.Vector3(3,3,3);
+		light2 = new THREE.Vector3(0.5,0.5,0.5);
+		light3 = new THREE.Vector3(0.6,0.2,0.2);
+		light1pos = new THREE.Vector3(0,25,-10);
+		light2pos = new THREE.Vector3(0,-1,3);
+		light3pos = new THREE.Vector3(-80,0,0);
+		ambientIntensity= new THREE.Vector3(1,1,1);
 		objLoader(objectName,type,0.9,new THREE.Vector3(0,0,0),new THREE.Vector3(0.6,0.6,0));
 	}else if(objectName=="Axe"){
-		light1 = new THREE.Vector3(10,0,0);
-		light2 = new THREE.Vector3(0,0,10);
-		light3 = new THREE.Vector3(0,10,0);
+		light1 = new THREE.Vector3(1.5,1,1);
+		light2 = new THREE.Vector3(0.5,0.5,0.5);
+		light3 = new THREE.Vector3(1.3,1.3,1.3);
+		light1pos = new THREE.Vector3(10,-20,0);
+		light2pos = new THREE.Vector3(0,0,50);
+		light3pos = new THREE.Vector3(20,5,0);
+		ambientIntensity= new THREE.Vector3(1,1,1);
 		objLoader(objectName,type,1,new THREE.Vector3(-5,0,0),new THREE.Vector3(-45*gradi,-25*gradi,-90*gradi));
 	}else if(objectName=="SwordSting"){
-		light1 = new THREE.Vector3(0,20,20);
-		light2 = new THREE.Vector3(0,0,0);
-		light3 = new THREE.Vector3(0,0,0);
+		light1 = new THREE.Vector3(0.5,0.3,0.5);
+		light2 = new THREE.Vector3(0.3,0.5,0.5);
+		light3 = new THREE.Vector3(0.1,0.1,0.1);
+		light1pos = new THREE.Vector3(5,-10,3);
+		light2pos = new THREE.Vector3(-15,-4,0);
+		light3pos = new THREE.Vector3(0,50,3);
+		ambientIntensity= new THREE.Vector3(0.2,0.2,0.2);
 		objLoader(objectName,type,0.7,new THREE.Vector3(0,0,-10),new THREE.Vector3(-150*gradi,0,0));
 	}
 }
 
-
 Start();
 Animate();
+
+function insert(x,y,z){
+	var geo = new THREE.SphereGeometry(1,64,64);
+	var mat = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+  var sphere = new THREE.Mesh( geo, mat );
+	sphere.position.set(x,y,z);
+  scene.add( sphere );
+}
 
 </script>
 
