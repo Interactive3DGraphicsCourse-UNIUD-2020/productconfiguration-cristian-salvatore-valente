@@ -10,12 +10,12 @@ body {
 	font-family: Monospace;
 	margin: 0px;
 	overflow: hidden;
-	/*background-color: #996000;*/
 }
 
 canvas {
 	width: 100%;
 	height: 100%;
+	display: block;
 }
 
 #menu {
@@ -277,6 +277,8 @@ function Start() {
 
 	camera.position.z+= 20;
 	createMenu();
+
+	  window.addEventListener( 'resize', onWindowResize, false );
 }
 
 
@@ -647,12 +649,14 @@ function buttonCallback(value) {
 	}
 }
 
+function onWindowResize() {
 
+	camera.aspect = window.innerWidth/ window.innerHeight;
 
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
 
-
-
-
+}
 
 function Animate() {
 		requestAnimationFrame( Animate );
@@ -663,7 +667,6 @@ function Animate() {
 
 
 function OBJ(objectName){
-
 
 	var gradi = Math.PI/180;
 	if(objectName=="DoubleBlades"){
