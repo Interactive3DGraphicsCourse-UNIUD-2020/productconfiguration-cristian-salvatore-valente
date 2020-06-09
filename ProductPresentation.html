@@ -196,7 +196,7 @@ canvas {
 
 		vec3 outRadiance =  PI * BRDFTot
 												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
-												+ cdiff*irradiance*ambientLight
+												+ cdiff*irradiance
 												+	fresnelTot*envLight*ambientLight;
 
 		// gamma encode the final value
