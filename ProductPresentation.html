@@ -267,10 +267,10 @@ function Start() {
 	renderer.shadowMap.enabled = true;
 	document.body.appendChild( renderer.domElement );
 
-	stats = new Stats();
+/*	stats = new Stats();
 	stats.domElement.style.position = 'absolute';
 	stats.domElement.style.top = '0px';
-	document.body.appendChild( stats.domElement );
+	document.body.appendChild( stats.domElement ); */
 
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	controls.enablePan = false;
@@ -661,7 +661,7 @@ function onWindowResize() {
 function Animate() {
 		requestAnimationFrame( Animate );
 		renderer.render( scene, camera );
-		stats.update();
+		//stats.update();
 		controls.update();
 }
 
