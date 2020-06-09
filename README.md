@@ -27,10 +27,10 @@ Le texture proposte per ogni oggetto sono state tutte realizzate tramite Substan
 
 Terminata la realizzazione delle texture per ogni oggetto è sorto un problema dovuto all'esportazione delle immagini da substance, in particolare substance esportava un immagine per ogni componente dell'oggetto separatamente, e con una disposizione tale da non permettere un'unione delle immagini al fine di unificare il caricamento delle texture. Il problema risiedeva nella struttura delle mesh che venivano rilevate come insieme di più parti, anche unificando le componenti all'inerno di substance al momento dell'esportazione le immagini venivano sovraposte in modo errato. Per qesto è stato necessario l'utilizzo di Autodesk-Maya con la quale si è potuta modificare la tassellazione e la mappatura della mesh in modo da sistemarla su un unica immagine.
 
- ![Prima](Images/Relation4.png)
+ ![Prima](Images/Relation5.png)
 
 
- ![Dopo](Images/Relation5.png)
+ ![Dopo](Images/Relation6.png)
 
 
 ## Goals
