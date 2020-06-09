@@ -34,6 +34,11 @@ Terminata la realizzazione delle texture per ogni oggetto è sorto un problema d
  ![Dopo](Images/Relation6.png)
  Dopo
 
+ In questo processo tuttavia la definizione della mesh si è lievemente ridotta con la perdita di qualche tassello che risulta poco visibile dopo l'applicazione delle texture. Uno dei problemi principali dell'esportazione è diventata l'impossibilità di dividere l'oggetto in parti per l'applicazione dei materiali. Questo problema è stato risolto tramite il baking delle texture sulla mesh che prevede l'applicazione di un id di aggregazione per ogni triangolo che successivamente è stato usato come maschera per l'applicazione del materiale. L'assegnazione dell'id viene realizzata in Maya e riconosciuta da Substance.
+
+![](Images/Relation7.png)
+
+Nell'immagine ogni colore rappresenta una delle categorie a cui possono appartenere i triangoli.
 
 ## Goals
 

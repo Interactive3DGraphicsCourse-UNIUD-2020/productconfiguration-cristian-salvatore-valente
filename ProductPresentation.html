@@ -210,7 +210,7 @@ canvas {
 <script  type="module">
 
 
-var scene, camera, renderer, controls, stats,actualPosition;
+var scene, camera, renderer, controls, stats;
 var menu = document.getElementById( "menu" );
 var objects = [];
 var meshList, current, currentMap, type ,angle,prefer;
@@ -225,18 +225,17 @@ function Start() {
 	scene = new THREE.Scene();
 	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
 	current = 1;
-	objects = [];
-	meshList = ["DoubleBlades","Katana","Axe","SwordSting"];
-	currentMap= 0;
-	type = 1;
+	objects = [];  																								// Contains id for evryone element in the scene
+	meshList = ["DoubleBlades","Katana","Axe","SwordSting"]; 			// List of objects like are named the files without .obj
+	currentMap= 0; 																								// pointer for environment actually used
+	type = 1;      																								// type of textures used
 	prefer = false;
-	angle = 0;
-	actualPosition= 25;
-	gotBackground = false;
+	angle = 0;																										// actual angle of rotation of the object
+	gotBackground = false;																				// parameter for show the background or no
 	spento = new THREE.Vector3(0,0,0);
 
 
-	BUTTONS = {
+	BUTTONS = {  																									//lists of all buttons like are named the files and id used in html
 		"back":"Back",
 		"heart":"AddPrefer",
 		"shopping-cart": "AddToCart",
@@ -254,7 +253,7 @@ function Start() {
 		"next":"Next"
 	};
 
-	maps = ["AutumnForest","Cave","GreenGrass","Room","RockDesert"]
+	maps = ["AutumnForest","Cave","GreenGrass","Room","RockDesert"] // List of cubemap like are named the files without .png
 
 
 
@@ -267,11 +266,6 @@ function Start() {
 	renderer.shadowMap.enabled = true;
 	document.body.appendChild( renderer.domElement );
 
-/*	stats = new Stats();
-	stats.domElement.style.position = 'absolute';
-	stats.domElement.style.top = '0px';
-	document.body.appendChild( stats.domElement ); */
-
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	controls.enablePan = false;
 
@@ -279,10 +273,17 @@ function Start() {
 	createMenu();
 
 	  window.addEventListener( 'resize', onWindowResize, false );
+		OBJ("Katana");
 }
 
 
-
+/*@function for load objects into Scene
+*objectName - name of files
+*textureType - int that rapresent the texture to used
+*scaling - vec3 that is input for the scale of the object loaded
+*globalposisito - vec3 with coordinates of the final position of objects
+*rotation - vec3 with values of the final rotation of object
+*/
 function objLoader(objectName,textureType,scaling,globalPosition,rotation){
 
 		var vShader = document.getElementById("vertex").textContent;
@@ -299,7 +300,7 @@ function objLoader(objectName,textureType,scaling,globalPosition,rotation){
 
 		uniforms = {
 			pointLightPosition:{type:"v3", value: [light1pos,light2pos,light3pos]}, // in world space
-			clight:{type:"v3", value: [light1,light2,light3]},
+			clight:{type:"v3", value: [light1,light2,light3]},											// in world space
 			specularMap:{type:"t", value: specTxt},
 			diffuseMap:{type:"t", value: diffTxt},
 			roughnessMap:{type:"t", value: rougTxt},
@@ -355,8 +356,9 @@ function objLoader(objectName,textureType,scaling,globalPosition,rotation){
 
 
 
-
-
+/*@function for load textures
+*file - string with the file's path
+*/
 function loadTexture(file) {
 	var texture = new THREE.TextureLoader().load( file , function ( texture ) {
 
@@ -368,7 +370,8 @@ function loadTexture(file) {
 	return texture;
 		}
 
-
+/*@function for create menu
+*/
 function createMenu() {
 
 	for ( var i in BUTTONS ) {
@@ -383,7 +386,9 @@ function createMenu() {
 
 
 
-
+/*@ function for manage the event of buttoncalls
+* value- event's id
+*/
 function buttonCallback(value) {
 
 			if(value=="RotateRight"){
@@ -548,8 +553,6 @@ function buttonCallback(value) {
 
 					}else{
 
-
-
 							var strMessage = document.getElementById("Set1Light") ;
 							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
 							strMessage.innerHTML = ' ';
@@ -563,6 +566,25 @@ function buttonCallback(value) {
 		  }else if(value=="Back"){
 				return function(){
 
+					// turn-on all lights when change object
+					var strMessage = document.getElementById("Set1Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-1.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set2Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-2.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set3Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-3.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Ambient") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun-on.png" style="width:30px;height:30px">');
+
+					//evrytime change parameters and load new object after removed all items form scene
 					if(current==0){
 						 current=3;
 					 }else{
@@ -582,6 +604,25 @@ function buttonCallback(value) {
 			}else if(value=="Next"){
 
 				return function(){
+					// turn-on all lights when change object
+					var strMessage = document.getElementById("Set1Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-1.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set2Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-2.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set3Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-3.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Ambient") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun-on.png" style="width:30px;height:30px">');
+
+					//evrytime change parameters and load new object after removed all items form scene
 					if(current==3){
 		        current=0;
 		      }else{
@@ -616,7 +657,7 @@ function buttonCallback(value) {
 					}
 
 		  }else if(value=="changeTexture"){
-
+				// like load new object with parameters change
 				return function(){
 
 				if(type==1){
@@ -655,7 +696,9 @@ function Animate() {
 		controls.update();
 }
 
-
+/*@ function inistialized with standard parameters for load all objects
+objectname-  string  object'name 
+*/
 function OBJ(objectName){
 
 	var gradi = Math.PI/180;
@@ -698,16 +741,12 @@ function OBJ(objectName){
 	}
 }
 
+
+
 Start();
 Animate();
 
-function insert(x,y,z){
-	var geo = new THREE.SphereGeometry(1,64,64);
-	var mat = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-  var sphere = new THREE.Mesh( geo, mat );
-	sphere.position.set(x,y,z);
-  scene.add( sphere );
-}
+
 
 </script>
 
