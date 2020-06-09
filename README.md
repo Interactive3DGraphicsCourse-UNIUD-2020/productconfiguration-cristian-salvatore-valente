@@ -1,6 +1,6 @@
 # Product Presentation : Weapons
 
-![](images/Relation1.png)
+![](Images/Relation1.png)
 
 READ CAREFULLY this document BEFORE you start!
 
