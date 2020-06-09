@@ -196,7 +196,7 @@ canvas {
 
 		vec3 outRadiance =  PI * BRDFTot
 												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
-												+ cdiff*irradiance
+												+ cdiff*irradiance*ambientLight
 												+	fresnelTot*envLight*ambientLight;
 
 		// gamma encode the final value
@@ -293,16 +293,6 @@ function objLoader(objectName,textureType,scaling,globalPosition,rotation){
 		var rougTxt = loadTexture("textures/Weapons/"+objectName+"Type"+textureType+"/Roughness.png");
 		var normalTxtr = loadTexture("textures/Weapons/"+objectName+"Type"+textureType+"/Normal.png");
 		var occlusionTxtr = loadTexture("textures/Weapons/"+objectName+"Type"+textureType+"/AmbientOcclusion.png");
-
-
-		// var cubeLoader = new THREE.CubeTextureLoader();
-		// 	cubeLoader.setPath('textures/CubeMaps/'+cubeMap+"/");
-		// var textureCube = cubeLoader.load( [
-		// 		'px.png', 'nx.png',
-		// 		'py.png', 'ny.png',
-		// 		'pz.png', 'nz.png'
-		// 	] );
-
 		var textureCube = loadCube(maps[currentMap]);
 
 

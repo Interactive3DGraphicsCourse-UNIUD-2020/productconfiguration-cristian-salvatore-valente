@@ -5,18 +5,32 @@
 ## Caratteristiche
 
 Il progetto proponone la visualizzazione di 4 tipi di armi bianche ciascuna disponibile in due diversi stili. I modelli sono stati reperiti dal sito: https://free3d.com/it/. La costruzione della scena fa uso di 3 librerie threejs, piu una quarta inserita nel codice per i test. Gli shader proposti fanno uso di 5 tipi di texture per rappresentare l'oggetto: componente diffusiva,componente speculare,roughness,ambient occlusion e normale. Grazie alla presenza di queste informazioni è stato possibile aggiungere le riflessioni ambientali, l'irradianza dovuta alla natura del materiale e ai fenomeni,se pur minimi dovuti alla natura delle mesh,dovuti all'occlusione ambientale delle superfici.
-Il fragment-shader è stato realizzato per calcolare 3 punti luce differenti più una ambientale che influenza l'impatto dell'ambiente sull'oggetto, è inoltre possible scegliere di quali luci far uso in ogni momento.
+Il fragment-shader è stato realizzato per calcolare 3 punti luce differenti più uno ambientale che influenza l'impatto dell'ambiente sull'oggetto, è inoltre possible scegliere di quali luci far uso in ogni momento.
 
 
 ![Frammento di codice che calcola la BRDF totale delle 3 luci](Images/Relation2.png)
 
-## Hints
 
-- Try to work out a basic project which satisfies all requirements well before the deadline and as soon as possible: you will then use the remaining time to refine, improve and polish.
-- If you are stuck for too much time on a problem, ask for help, preferably in the forum.
-- the process is as important as the result. Use this project to learn a workflow, and how to use tools effectively. Experiment, and try to come up with efficient, elegant, and well commented code.
-- commit often in your git repository and with meaningful comments.
-- do not choose too complex products with many materials. 3-4 materials are enough.
+Nella visualizzazione vi è assenza di ombre in quanto viene proposto un unico oggetto non contestualizzato in un ambiente interattivo, e il paesaggio che viene proposto in background ha il solo scopo di fornire diverse prospettive e tipi di luce per l'oggetto. Per problemi dovuti all'eterogeneità delle mesh degli oggetti non è stato possibile creare una texturizzazione localizzata ai singoli componenti. Il motivo principale è l' assenza delle coordinate necessarie alla corretta disposizione dei componenti(cosa che avviene automaticamente nel caso di caricamento complessivo), secondariamente invece il numero eterogeno dei componenti degli oggetti avrebbe richiesto una funzione specifica di loader per ogni oggetto, cosa che avrebbe reso piu complesso e meno adattabile a nuovi oggetti il codice.
+
+
+![Frammento di codice per il caricamento dell'oggetto](Images/Relation3.png)
+
+
+
+
+## Texture
+
+Le texture proposte per ogni oggetto sono state tutte realizzate tramite Substance Painter ad eccezione di una già presente insieme all'oggetto(il pugnale con una scritta in rilievo sulla lama). Tramite Substance è stato possibile applicare alle mesh diversi tipi di materiali già presenti o di applicarne di personalizzati.
+
+![](Images/Relation4.png)  
+
+Terminata la realizzazione delle texture per ogni oggetto è sorto un problema dovuto all'esportazione delle immagini da substance, in particolare substance esportava un immagine per ogni componente dell'oggetto separatamente, e con una disposizione tale da non permettere un'unione delle immagini al fine di unificare il caricamento delle texture. Il problema risiedeva nella struttura delle mesh che venivano rilevate come insieme di più parti, anche unificando le componenti all'inerno di substance al momento dell'esportazione le immagini venivano sovraposte in modo errato. Per qesto è stato necessario l'utilizzo di Autodesk-Maya con la quale si è potuta modificare la tassellazione e la mappatura della mesh in modo da sistemarla su un unica immagine.
+
+ ![Prima](Images/Relation4.png)
+
+
+ ![Dopo](Images/Relation5.png)
 
 
 ## Goals
