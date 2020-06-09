@@ -8,7 +8,7 @@ Il progetto proponone la visualizzazione di 4 tipi di armi bianche ciascuna disp
 Il fragment-shader è stato realizzato per calcolare 3 punti luce differenti più una ambientale che influenza l'impatto dell'ambiente sull'oggetto, è inoltre possible scegliere di quali luci far uso in ogni momento.
 
 
-![](Images/Relation2.png)
+![Frammento di codice che calcola la BRDF totale delle 3 luci](Images/Relation2.png)
 
 ## Hints
 
