@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ProductPresentation</title>
+
+
+<style>
+
+body {
+	font-family: Monospace;
+	margin: 0px;
+	overflow: hidden;
+}
+
+canvas {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+#menu {
+			position: absolute;
+			bottom: 20px;
+			width: 100%;
+			padding: 10px;
+			box-sizing: border-box;
+			text-align: center;
+		}
+
+		button {
+			color: rgb(255,255,255);
+			background: rgb(255,255,255,0.1);
+			border: 0px;
+			padding: 5px 10px;
+			margin: 2px;
+			font-size: 14px;
+			cursor: pointer;
+		}
+
+		button:hover {
+				background-color: rgba(0,255,255,0.5);
+			}
+
+</style>
+
+	</head>
+
+
+
+<body>
+
+		<script src="lib/three.min.js"></script>
+		<script src="lib/stats.min.js"></script>
+		<script src="lib/OBJLoader.js"></script>
+		<script src="lib/OrbitControls.js"></script>
+
+
+
+<script type="text/x-glsl" id="vertex">
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying vec3 wPosition;
+  varying vec2 uVv;
+
+  void main() {
+    vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+    vPosition = vPos.xyz;
+    wPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+    vNormal = normalMatrix * normal;
+    uVv = uv;
+    gl_Position = projectionMatrix * vPos;
+	}
+ </script>
+
+
+<script type="text/x-glsl" id="fragment">
+
+	varying vec3 vNormal;
+	varying vec3 vPosition;
+	varying vec3 wPosition;
+	varying vec2 uVv;
+
+	uniform vec3 pointLightPosition[3]; // in world space
+	uniform vec3 clight[3];
+
+	uniform vec3 ambientLight;
+	uniform sampler2D aoMap;
+
+	uniform sampler2D specularMap;
+	uniform sampler2D diffuseMap;
+	uniform sampler2D roughnessMap;
+	uniform vec2 textureRepeat;
+
+	uniform sampler2D normalMap;
+	uniform vec2 normalScale;
+
+	uniform samplerCube envMap;
+
+	const float PI = 3.14159;
+
+	vec3 cdiff;
+	vec3 cspec;
+	float roughness;
+
+	vec3 FSchlick(float lDoth) {
+		return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
+	}
+
+	float DGGX(float nDoth, float alpha) {
+		float alpha2 = alpha*alpha;
+		float d = nDoth*nDoth*(alpha2-1.0)+1.0;
+		return (  alpha2 / (PI*d*d));
+	}
+
+	float G1(float dotProduct, float k) {
+		return (dotProduct / (dotProduct*(1.0-k) + k) );
+	}
+
+	float GSmith(float nDotv, float nDotl) {
+			float k = roughness*roughness;
+			return G1(nDotl,k)*G1(nDotv,k);
+	}
+
+	#extension GL_OES_standard_derivatives : enable
+
+	vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {
+
+	vec3 q0 = dFdx( eye_pos.xyz );
+	vec3 q1 = dFdy( eye_pos.xyz );
+	vec2 st0 = dFdx( uVv.st );
+	vec2 st1 = dFdy( uVv.st );
+
+	vec3 S = normalize(  q0 * st1.t - q1 * st0.t );
+	vec3 T = normalize( -q0 * st1.s + q1 * st0.s );
+	vec3 N =  surf_norm ;
+
+	vec3 mapN = normalize(texture2D( normalMap, uVv ).xyz * 2.0 - 1.0);
+	mapN.xy = normalScale * mapN.xy;
+	mat3 tsn = mat3( S, T, N );
+	return normalize( tsn * mapN );
+	}
+
+	vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+	return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );}
+
+	void main() {
+
+		vec3 n = perturbNormal2Arb( vPosition,normalize(vNormal));
+		vec3 v = normalize( -vPosition);
+		float nDotv = max(dot( n, v ),0.000001);
+
+		vec3 BRDFTot ;
+		vec3 fresnelTot;
+
+		cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
+		// texture in sRGB, linearize
+		cdiff = pow( cdiff, vec3(2.2));
+		cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
+		// texture in sRGB, linearize
+		cspec = pow( cspec, vec3(2.2));
+		roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
+
+		/* enviromentMapping section*/
+		vec3 worldN = inverseTransformDirection( n, viewMatrix );
+		vec3 worldV = cameraPosition - wPosition ;
+		vec3 r = normalize( reflect(-worldV,worldN));
+
+		vec3 irradiance = textureCube( envMap, worldN).rgb;
+		// texture in sRGB, linearize
+		irradiance = pow( irradiance, vec3(3.3));
+
+		vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
+		// texture in sRGB, linearize
+		envLight = pow( envLight, vec3(4.4));
+
+
+		for(int i=0;i<3;i++){
+
+			vec4 lPosition = viewMatrix * vec4( pointLightPosition[i], 1.0 );
+			vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+			vec3 h = normalize( v + l);
+				/*BRDF section*/
+			// small quantity to prevent divisions by 0
+			float nDotl = max(dot( n, l ),0.000001);
+			float lDoth = max(dot( l, h ),0.000001);
+			float nDoth = max(dot( n, h ),0.000001);
+			float vDoth = max(dot( v, h ),0.000001);
+
+			vec3 fresnel = FSchlick(lDoth);
+			vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
+
+			BRDFTot += BRDF*clight[i]*nDotl;
+			fresnelTot+= fresnel;
+
+		}
+
+		vec3 outRadiance =  PI * BRDFTot
+												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
+												+ cdiff*irradiance*ambientLight
+												+	fresnelTot*envLight*ambientLight;
+
+		// gamma encode the final value
+		gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+	}
+</script>
+
+
+<div id="menu"></div>
+
+<script  type="module">
+
+
+var scene, camera, renderer, controls, stats;
+var menu = document.getElementById( "menu" );
+var objects = [];
+var meshList, current, currentMap, type ,angle,prefer;
+var light1,light2,light3, uniforms;
+var light1pos,light2pos,light3pos;
+
+var spento,BUTTONS ,maps,gotBackground,ambientIntensity;
+
+
+function Start() {
+
+	scene = new THREE.Scene();
+	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
+	current = 1;
+	objects = [];  																								// Contains id for evryone element in the scene
+	meshList = ["DoubleBlades","Katana","Axe","SwordSting"]; 			// List of objects like are named the files without .obj
+	currentMap= 0; 																								// pointer for environment actually used
+	type = 1;      																								// type of textures used
+	prefer = false;
+	angle = 0;																										// actual angle of rotation of the object
+	gotBackground = false;																				// parameter for show the background or no
+	spento = new THREE.Vector3(0,0,0);
+
+
+	BUTTONS = {  																									//lists of all buttons like are named the files and id used in html
+		"back":"Back",
+		"heart":"AddPrefer",
+		"shopping-cart": "AddToCart",
+		"like": "AddLike",
+		"share": "Share",
+		"sun-on": "Ambient",
+		"rotate-right": "RotateLeft",
+		"change": "changeTexture",
+		"rotate-left": "RotateRight",
+		"light-bulb-on-1":"Set1Light",
+		"light-bulb-on-2":"Set2Light",
+		"light-bulb-on-3":"Set3Light",
+		"image":"showMap",
+		"changeCube":"changeMap",
+		"next":"Next"
+	};
+
+	maps = ["AutumnForest","Cave","GreenGrass","Room","RockDesert"] // List of cubemap like are named the files without .png
+
+
+
+	renderer = new THREE.WebGLRenderer( {antialias: true} );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.gammaInput = true;
+	renderer.gammaOutput = true;
+	renderer.shadowMap.enabled = true;
+	document.body.appendChild( renderer.domElement );
+
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	controls.enablePan = false;
+
+	camera.position.z+= 20;
+	createMenu();
+
+	  window.addEventListener( 'resize', onWindowResize, false );
+		OBJ("Katana");
+}
+
+
+/*@function for load objects into Scene
+*objectName - name of files
+*textureType - int that rapresent the texture to used
+*scaling - vec3 that is input for the scale of the object loaded
+*globalposisito - vec3 with coordinates of the final position of objects
+*rotation - vec3 with values of the final rotation of object
+*/
+function objLoader(objectName,textureType,scaling,globalPosition,rotation){
+
+		var vShader = document.getElementById("vertex").textContent;
+		var fShader = document.getElementById("fragment").textContent;
+
+		var specTxt = loadTexture("texturesLowDetails/Weapons/"+objectName+"Type"+textureType+"/Specular.png");
+		var diffTxt = loadTexture("texturesLowDetails/Weapons/"+objectName+"Type"+textureType+"/Diffusive.png");
+		var rougTxt = loadTexture("texturesLowDetails/Weapons/"+objectName+"Type"+textureType+"/Roughness.png");
+		var normalTxtr = loadTexture("texturesLowDetails/Weapons/"+objectName+"Type"+textureType+"/Normal.png");
+		var occlusionTxtr = loadTexture("texturesLowDetails/Weapons/"+objectName+"Type"+textureType+"/AmbientOcclusion.png");
+		var textureCube = loadCube(maps[currentMap]);
+
+
+
+		uniforms = {
+			pointLightPosition:{type:"v3", value: [light1pos,light2pos,light3pos]}, // in world space
+			clight:{type:"v3", value: [light1,light2,light3]},											// in world space
+			specularMap:{type:"t", value: specTxt},
+			diffuseMap:{type:"t", value: diffTxt},
+			roughnessMap:{type:"t", value: rougTxt},
+			textureRepeat:{type:"v2", value:new THREE.Vector2(1,1)},
+			normalMap:{type:"t", value: normalTxtr},
+			normalScale:{type:"v2", value: new THREE.Vector2(2,2)},
+			aoMap:{type:"t", value: occlusionTxtr},
+			ambientLight:{type:"v3", value: ambientIntensity},
+			envMap:{type:"t", value: textureCube}
+		}
+
+		var shaderMat = new THREE.ShaderMaterial({
+			uniforms: uniforms,
+			fragmentShader: fShader ,
+			vertexShader: vShader,
+		});
+
+		var loader = new THREE.OBJLoader();
+
+		loader.load("Objects/"+objectName+".obj",function(obj){
+
+					obj.children.forEach(writeGeometry);
+
+					function writeGeometry(children){
+						var geometry = children.geometry;
+						var mesh = new THREE.Mesh( geometry, shaderMat );
+						mesh.scale.set(scaling,scaling,scaling);
+						mesh.position.set(globalPosition.x,globalPosition.y,globalPosition.z);
+						mesh.rotation.set(rotation.x,rotation.y,rotation.z);
+						scene.add( mesh );
+					 	objects.push(mesh);}
+				});
+
+
+			}
+
+
+			function loadCube(cubeMap){
+
+				var cubeLoader = new THREE.CubeTextureLoader();
+					cubeLoader.setPath('textures/CubeMaps/'+cubeMap+"/");
+				var textureCube = cubeLoader.load( [
+						'px.png', 'nx.png',
+						'py.png', 'ny.png',
+						'pz.png', 'nz.png'
+					] );
+
+					return textureCube;
+			}
+
+
+
+
+
+
+/*@function for load textures
+*file - string with the file's path
+*/
+function loadTexture(file) {
+	var texture = new THREE.TextureLoader().load( file , function ( texture ) {
+
+	texture.minFilter = THREE.LinearMipMapLinearFilter;
+	texture.anisotropy = renderer.getMaxAnisotropy();
+	texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+		texture.offset.set( 0, 0 );
+	texture.needsUpdate = true;} )
+	return texture;
+		}
+
+/*@function for create menu
+*/
+function createMenu() {
+
+	for ( var i in BUTTONS ) {
+
+		var button = document.createElement( 'button');
+		button.setAttribute("id",BUTTONS[i]);
+		button.innerHTML = '<img src="Icons/'+i+'.png" style="width:30px;height:30px;" >';
+		menu.appendChild( button );
+		button.addEventListener('click',buttonCallback(BUTTONS[i]),false);}
+	}
+
+
+
+
+/*@ function for manage the event of buttoncalls
+* value- event's id
+*/
+function buttonCallback(value) {
+
+			if(value=="RotateRight"){
+
+				return function () {
+					for ( var i = 0; i < objects.length; i ++ ) {
+						var object = objects[ i ];
+						object.rotation.y -=3*Math.PI/180;
+					};
+				}
+
+		  }else if(value=="RotateLeft"){
+
+					return function () {
+
+						for ( var i = 0; i < objects.length; i ++ ) {
+							var object = objects[ i ];
+							object.rotation.y +=3*Math.PI/180;
+						};
+				}
+
+			}else if(value=="showMap"){
+
+				return function(){
+					if(gotBackground){
+					scene.background= loadCube("NoMaps");
+					gotBackground=false;
+					}else{
+					scene.background= loadCube(maps[currentMap]);
+					gotBackground=true;}
+
+				}
+		  }else if(value=="changeMap"){
+
+				return function(){
+					if(currentMap>3){
+						currentMap=0;
+					}else{currentMap++;}
+
+				var cube = loadCube(maps[currentMap])
+				uniforms.envMap.value= cube ;
+				if(gotBackground){scene.background= cube}
+
+				}
+
+			}else if(value=="Ambient"){
+
+				return function(){
+					if(uniforms.ambientLight.value == spento){
+
+						var strMessage = document.getElementById("Ambient") ;
+
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun-on.png" style="width:30px;height:30px">');
+
+						uniforms.ambientLight.value = ambientIntensity;
+
+						}else{
+
+							var strMessage = document.getElementById("Ambient") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, ' ');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun.png" style="width:30px;height:30px">');
+							uniforms.ambientLight.value = spento;
+						}
+				}
+
+			}else if(value=="AddLike"){
+
+				return function(){
+						alert("Need to associate a facebook account to unlock this feature");
+					}
+
+		  }else if(value=="AddPrefer"){
+
+				return function () {
+					if (prefer){
+
+						var strMessage = document.getElementById("AddPrefer") ;
+
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/heart.png" style="width:30px;height:30px">');
+						prefer = false;
+
+					}else{
+						var strMessage = document.getElementById("AddPrefer") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, ' ');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/heartOn.png" style="width:30px;height:30px">');
+
+						prefer = true;
+
+					}
+
+				}
+
+		  }else if(value=="Set2Light"){
+
+
+
+				return function () {
+
+					if(uniforms.clight.value[1] == spento){
+
+							var strMessage = document.getElementById("Set2Light") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-2.png" style="width:30px;height:30px">');
+
+							uniforms.clight.value = [uniforms.clight.value[0],light2,uniforms.clight.value[2]];
+					}else{
+
+						var strMessage = document.getElementById("Set2Light") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-2.png" style="width:30px;height:30px">');
+
+						uniforms.clight.value = [uniforms.clight.value[0],spento,uniforms.clight.value[2]];
+						}
+				};
+
+		  }else if(value=="Set3Light"){
+
+				return function () {
+
+					if(uniforms.clight.value[2] == spento) {
+						var strMessage = document.getElementById("Set3Light") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-3.png" style="width:30px;height:30px">');
+
+							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],light3];
+					}else{
+
+
+							var strMessage = document.getElementById("Set3Light") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-3.png" style="width:30px;height:30px">');
+
+							uniforms.clight.value = [uniforms.clight.value[0],uniforms.clight.value[1],spento];
+
+						}
+				};
+
+
+
+		  }else if(value=="Set1Light"){
+
+				return function () {
+
+					if(uniforms.clight.value[0] == spento) {
+
+						var strMessage = document.getElementById("Set1Light") ;
+						strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+						strMessage.innerHTML = ' ';
+						strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-1.png" style="width:30px;height:30px">');
+
+						uniforms.clight.value = [light1,uniforms.clight.value[1],uniforms.clight.value[2]];
+
+					}else{
+
+							var strMessage = document.getElementById("Set1Light") ;
+							strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+							strMessage.innerHTML = ' ';
+							strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-1.png" style="width:30px;height:30px">');
+
+							uniforms.clight.value = [spento,uniforms.clight.value[1],uniforms.clight.value[2]];
+				};
+			};
+
+
+		  }else if(value=="Back"){
+				return function(){
+
+					// turn-on all lights when change object
+					var strMessage = document.getElementById("Set1Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-1.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set2Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-2.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set3Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-3.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Ambient") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun-on.png" style="width:30px;height:30px">');
+
+					//evrytime change parameters and load new object after removed all items form scene
+					if(current==0){
+						 current=3;
+					 }else{
+						 current--; };
+
+						for ( var i = 0; i < objects.length; i ++ ) {
+							 var object = objects[ i ];
+							 object.remove( object );
+							 scene.remove( object );
+						 };
+						 var pointer = meshList[current];
+						 OBJ(pointer);
+						 camera.position.set(0,0,25);
+						 camera.lookAt(0,0,0);
+					 }
+
+			}else if(value=="Next"){
+
+				return function(){
+					// turn-on all lights when change object
+					var strMessage = document.getElementById("Set1Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-1.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set2Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-2.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Set3Light") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/light-bulb-on-3.png" style="width:30px;height:30px">');
+					strMessage = document.getElementById("Ambient") ;
+					strMessage.innerHTML = strMessage.innerHTML.replace(/./g, '');
+					strMessage.innerHTML = ' ';
+					strMessage.innerHTML = strMessage.innerHTML.replace(/ /g, '<img src="Icons/sun-on.png" style="width:30px;height:30px">');
+
+					//evrytime change parameters and load new object after removed all items form scene
+					if(current==3){
+		        current=0;
+		      }else{
+		        current++; };
+
+
+		        for ( var i = 0; i < objects.length; i ++ ) {
+		          var object = objects[ i ];
+
+		          object.remove( object );
+		          scene.remove( object );
+		        };
+
+		      var pointer = meshList[current];
+
+					OBJ(pointer);
+					camera.position.set(0,0,25);
+					camera.lookAt(0,0,0);
+
+		      }
+
+			}else if(value=="Share"){
+
+				return function(){
+						alert("This function will be avaiable soon!");
+					}
+
+		  }else if(value=="AddToCart"){
+
+				return function(){
+					  alert("Sorry at moment our server are busy, try later");
+					}
+
+		  }else if(value=="changeTexture"){
+				// like load new object with parameters change
+				return function(){
+
+				if(type==1){
+					type=2;
+				}else{
+					type=1;
+				}
+
+				for ( var i = 0; i < objects.length; i ++ ) {
+					var object = objects[ i ];
+
+					object.remove( object );
+					scene.remove( object );
+				};
+
+			var pointer = meshList[current];
+
+			OBJ(pointer);
+		};
+	}
+}
+
+function onWindowResize() {
+
+	camera.aspect = window.innerWidth/ window.innerHeight;
+
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+
+}
+
+function Animate() {
+		requestAnimationFrame( Animate );
+		renderer.render( scene, camera );
+		//stats.update();
+		controls.update();
+}
+
+/*@ function inistialized with standard parameters for load all objects
+objectname-  string  object'name
+*/
+function OBJ(objectName){
+
+	var gradi = Math.PI/180;
+	if(objectName=="DoubleBlades"){
+		light1 = new THREE.Vector3(0.5,0.5,0.5);
+		light2 = new THREE.Vector3(5,5,7);
+		light3 = new THREE.Vector3(7,5,5);
+		light1pos = new THREE.Vector3(5,0,50);
+		light2pos = new THREE.Vector3(10,0,0);
+		light3pos = new THREE.Vector3(-10,5,0);
+		ambientIntensity= new THREE.Vector3(2,2,2);
+		objLoader(objectName,type,0.1,new THREE.Vector3(0,-10,0),new THREE.Vector3(0,0,0));
+	}else if(objectName=="Katana"){
+		light1 = new THREE.Vector3(3,3,3);
+		light2 = new THREE.Vector3(0.5,0.5,0.5);
+		light3 = new THREE.Vector3(0.6,0.2,0.2);
+		light1pos = new THREE.Vector3(0,25,-10);
+		light2pos = new THREE.Vector3(0,-1,3);
+		light3pos = new THREE.Vector3(-80,0,0);
+		ambientIntensity= new THREE.Vector3(1,1,1);
+		objLoader(objectName,type,0.9,new THREE.Vector3(0,0,0),new THREE.Vector3(0.6,0.6,0));
+	}else if(objectName=="Axe"){
+		light1 = new THREE.Vector3(1.5,1,1);
+		light2 = new THREE.Vector3(0.5,0.5,0.5);
+		light3 = new THREE.Vector3(1.3,1.3,1.3);
+		light1pos = new THREE.Vector3(10,-20,0);
+		light2pos = new THREE.Vector3(0,0,50);
+		light3pos = new THREE.Vector3(20,5,0);
+		ambientIntensity= new THREE.Vector3(1,1,1);
+		objLoader(objectName,type,1,new THREE.Vector3(-5,0,0),new THREE.Vector3(-45*gradi,-25*gradi,-90*gradi));
+	}else if(objectName=="SwordSting"){
+		light1 = new THREE.Vector3(0.5,0.3,0.5);
+		light2 = new THREE.Vector3(0.3,0.5,0.5);
+		light3 = new THREE.Vector3(0.1,0.1,0.1);
+		light1pos = new THREE.Vector3(5,-10,3);
+		light2pos = new THREE.Vector3(-15,-4,0);
+		light3pos = new THREE.Vector3(0,50,3);
+		ambientIntensity= new THREE.Vector3(0.2,0.2,0.2);
+		objLoader(objectName,type,0.7,new THREE.Vector3(0,0,-10),new THREE.Vector3(-150*gradi,0,0));
+	}
+}
+
+
+
+Start();
+Animate();
+
+
+
+</script>
+
+
+	</body>
+</html>
