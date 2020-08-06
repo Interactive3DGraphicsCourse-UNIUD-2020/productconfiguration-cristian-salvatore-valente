@@ -102,7 +102,7 @@ canvas {
 	vec3 cspec;
 	float roughness;
 
-	vec3 FSchlick(float lDoth) {
+	vec3 Fresnel(float lDoth) {
 		return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
 	}
 
@@ -112,13 +112,13 @@ canvas {
 		return (  alpha2 / (PI*d*d));
 	}
 
-	float G1(float dotProduct, float k) {
+	float Gpartial(float dotProduct, float k) {
 		return (dotProduct / (dotProduct*(1.0-k) + k) );
 	}
 
 	float GSmith(float nDotv, float nDotl) {
 			float k = roughness*roughness;
-			return G1(nDotl,k)*G1(nDotv,k);
+			return Gpartial(nDotl,k)*Gpartial(nDotv,k);
 	}
 
 	#extension GL_OES_standard_derivatives : enable
@@ -170,9 +170,9 @@ canvas {
 		envLight = pow( envLight, vec3(2.2));
 
 
-		vec3 fresnelAmbient= FSchlick(nDotv);
+		vec3 fresnelAmbient= Fresnel(nDotv);
 
-		vec3 occlusion = ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz;
+		vec3 AmbientOcclusion = ambientLight* cdiff *texture2D( aoMap, uVv * textureRepeat ).xyz;
 
 
 
@@ -189,18 +189,18 @@ canvas {
 			float nDoth = max(dot( n, h ),0.000001);
 			float vDoth = max(dot( v, h ),0.000001);
 
-			vec3 fresnel = FSchlick(lDoth);
-			vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
+			vec3 fresnel = Fresnel(lDoth);
+			vec3 BRDFspec = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
 
 			vec3 BRDFdiff = clight[i]*nDotl*cdiff;
 
-			BRDFTot += BRDF*clight[i]*nDotl + BRDFdiff;
+			BRDFTot += BRDFspec*clight[i]*nDotl + BRDFdiff;
 
 		}
 
 
 		vec3 outRadiance =  PI * BRDFTot
-												+	occlusion
+												+	AmbientOcclusion
 												+ cdiff*irradiance*ambientLight
 												+	fresnelAmbient*envLight*ambientLight;
 
