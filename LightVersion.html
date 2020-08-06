@@ -59,12 +59,14 @@ canvas {
 <script type="text/x-glsl" id="vertex">
   varying vec3 vNormal;
   varying vec3 vPosition;
+	varying vec3 wPosition;
   varying vec2 uVv;
 
   void main() {
     vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
     vPosition = vPos.xyz;
     vNormal = normalMatrix * normal;
+		wPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
     uVv = uv;
     gl_Position = projectionMatrix * vPos;
 	}
@@ -74,6 +76,7 @@ canvas {
 <script type="text/x-glsl" id="fragment">
 
 	varying vec3 vNormal;
+	varying vec3 wPosition;
 	varying vec3 vPosition;
 	varying vec2 uVv;
 
@@ -121,21 +124,20 @@ canvas {
 	#extension GL_OES_standard_derivatives : enable
 
 	vec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm ) {
+			vec3 q0 = dFdx( eye_pos.xyz );
+			vec3 q1 = dFdy( eye_pos.xyz );
+			vec2 st0 = dFdx( uVv.st );
+			vec2 st1 = dFdy( uVv.st );
 
-	vec3 q0 = dFdx( eye_pos.xyz );
-	vec3 q1 = dFdy( eye_pos.xyz );
-	vec2 st0 = dFdx( uVv.st );
-	vec2 st1 = dFdy( uVv.st );
+			vec3 S = normalize(  q0 * st1.t - q1 * st0.t );
+			vec3 T = normalize( -q0 * st1.s + q1 * st0.s );
+			vec3 N =  surf_norm ;
 
-	vec3 S = normalize(  q0 * st1.t - q1 * st0.t );
-	vec3 T = normalize( -q0 * st1.s + q1 * st0.s );
-	vec3 N =  surf_norm ;
-
-	vec3 mapN = normalize(texture2D( normalMap, uVv ).xyz * 2.0 - 1.0);
-	mapN.xy = normalScale * mapN.xy;
-	mat3 tsn = mat3( S, T, N );
-	return normalize( tsn * mapN );
-	}
+			vec3 mapN = normalize(texture2D( normalMap, uVv ).xyz * 2.0 - 1.0);
+			mapN.xy = normalScale * mapN.xy;
+			mat3 toEye = mat3( S, T, N );
+			return normalize( toEye * mapN );
+			}
 
 	vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
 	return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );}
@@ -147,28 +149,28 @@ canvas {
 		float nDotv = max(dot( n, v ),0.000001);
 
 		vec3 BRDFTot ;
-		vec3 fresnelTot;
 
 		cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
-		// texture in sRGB, linearize
-		cdiff = pow( cdiff, vec3(2.2));
-		cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
-		// texture in sRGB, linearize
-		cspec = pow( cspec, vec3(2.2));
-		roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
+			cdiff = pow( cdiff, vec3(2.2));
 
-		/* enviromentMapping section*/
+		cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
+		cspec = pow( cspec, vec3(2.2));
+
+		roughness = texture2D( roughnessMap, uVv*textureRepeat).r;
+
+		/* enviromentMapping */
 		vec3 worldN = inverseTransformDirection( n, viewMatrix );
-		vec3 worldV = cameraPosition - vPosition ;
-		vec3 r = normalize( reflect(-worldV,worldN));
+		vec3 worldV = cameraPosition - wPosition ;
+		vec3 ref = normalize( reflect(-worldV,worldN));
 
 		vec3 irradiance = textureCube( envMap, worldN).rgb;
-		// texture in sRGB, linearize
-		irradiance = pow( irradiance, vec3(3.3));
+		irradiance = pow( irradiance, vec3(2.2));
 
-		vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
-		// texture in sRGB, linearize
-		envLight = pow( envLight, vec3(4.4));
+		vec3 envLight = textureCube( envMap, vec3(-ref.x, ref.yz)).rgb;
+		envLight = pow( envLight, vec3(2.2));
+
+
+		vec3 fresnelAmbient= FSchlick(nDotv);
 
 		vec3 occlusion = ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz;
 
@@ -193,7 +195,6 @@ canvas {
 			vec3 BRDFdiff = clight[i]*nDotl*cdiff;
 
 			BRDFTot += BRDF*clight[i]*nDotl + BRDFdiff;
-			fresnelTot+= fresnel;
 
 		}
 
@@ -201,7 +202,7 @@ canvas {
 		vec3 outRadiance =  PI * BRDFTot
 												+	occlusion
 												+ cdiff*irradiance*ambientLight
-												+	fresnelTot*envLight*ambientLight;
+												+	fresnelAmbient*envLight*ambientLight;
 
 		// gamma encode the final value
 		gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
