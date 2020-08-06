@@ -59,13 +59,11 @@ canvas {
 <script type="text/x-glsl" id="vertex">
   varying vec3 vNormal;
   varying vec3 vPosition;
-  varying vec3 wPosition;
   varying vec2 uVv;
 
   void main() {
     vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
     vPosition = vPos.xyz;
-    wPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
     vNormal = normalMatrix * normal;
     uVv = uv;
     gl_Position = projectionMatrix * vPos;
@@ -77,7 +75,6 @@ canvas {
 
 	varying vec3 vNormal;
 	varying vec3 vPosition;
-	varying vec3 wPosition;
 	varying vec2 uVv;
 
 	uniform vec3 pointLightPosition[3]; // in world space
@@ -162,7 +159,7 @@ canvas {
 
 		/* enviromentMapping section*/
 		vec3 worldN = inverseTransformDirection( n, viewMatrix );
-		vec3 worldV = cameraPosition - wPosition ;
+		vec3 worldV = cameraPosition - vPosition ;
 		vec3 r = normalize( reflect(-worldV,worldN));
 
 		vec3 irradiance = textureCube( envMap, worldN).rgb;
@@ -172,6 +169,10 @@ canvas {
 		vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz)).rgb;
 		// texture in sRGB, linearize
 		envLight = pow( envLight, vec3(4.4));
+
+		vec3 occlusion = ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz;
+
+
 
 
 		for(int i=0;i<3;i++){
@@ -189,13 +190,16 @@ canvas {
 			vec3 fresnel = FSchlick(lDoth);
 			vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/ (4.0*nDotl*nDotv);
 
-			BRDFTot += BRDF*clight[i]*nDotl;
+			vec3 BRDFdiff = clight[i]*nDotl*cdiff;
+
+			BRDFTot += BRDF*clight[i]*nDotl + BRDFdiff;
 			fresnelTot+= fresnel;
 
 		}
 
+
 		vec3 outRadiance =  PI * BRDFTot
-												+	ambientLight*cdiff*texture2D( aoMap, uVv * textureRepeat ).xyz
+												+	occlusion
 												+ cdiff*irradiance*ambientLight
 												+	fresnelTot*envLight*ambientLight;
 
@@ -362,7 +366,6 @@ function objLoader(objectName,textureType,scaling,globalPosition,rotation){
 function loadTexture(file) {
 	var texture = new THREE.TextureLoader().load( file , function ( texture ) {
 
-	texture.minFilter = THREE.LinearMipMapLinearFilter;
 	texture.anisotropy = renderer.getMaxAnisotropy();
 	texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 		texture.offset.set( 0, 0 );
@@ -709,16 +712,16 @@ function OBJ(objectName){
 		light1pos = new THREE.Vector3(5,0,50);
 		light2pos = new THREE.Vector3(10,0,0);
 		light3pos = new THREE.Vector3(-10,5,0);
-		ambientIntensity= new THREE.Vector3(2,2,2);
+		ambientIntensity= new THREE.Vector3(0.1,0.1,0.1);
 		objLoader(objectName,type,0.1,new THREE.Vector3(0,-10,0),new THREE.Vector3(0,0,0));
 	}else if(objectName=="Katana"){
-		light1 = new THREE.Vector3(3,3,3);
+		light1 = new THREE.Vector3(1,1,1);
 		light2 = new THREE.Vector3(0.5,0.5,0.5);
 		light3 = new THREE.Vector3(0.6,0.2,0.2);
 		light1pos = new THREE.Vector3(0,25,-10);
 		light2pos = new THREE.Vector3(0,-1,3);
 		light3pos = new THREE.Vector3(-80,0,0);
-		ambientIntensity= new THREE.Vector3(1,1,1);
+		ambientIntensity= new THREE.Vector3(0.1,0.1,0.1);
 		objLoader(objectName,type,0.9,new THREE.Vector3(0,0,0),new THREE.Vector3(0.6,0.6,0));
 	}else if(objectName=="Axe"){
 		light1 = new THREE.Vector3(1.5,1,1);
@@ -727,7 +730,7 @@ function OBJ(objectName){
 		light1pos = new THREE.Vector3(10,-20,0);
 		light2pos = new THREE.Vector3(0,0,50);
 		light3pos = new THREE.Vector3(20,5,0);
-		ambientIntensity= new THREE.Vector3(1,1,1);
+		ambientIntensity= new THREE.Vector3(0.1,0.1,0.1);
 		objLoader(objectName,type,1,new THREE.Vector3(-5,0,0),new THREE.Vector3(-45*gradi,-25*gradi,-90*gradi));
 	}else if(objectName=="SwordSting"){
 		light1 = new THREE.Vector3(0.5,0.3,0.5);
@@ -736,7 +739,7 @@ function OBJ(objectName){
 		light1pos = new THREE.Vector3(5,-10,3);
 		light2pos = new THREE.Vector3(-15,-4,0);
 		light3pos = new THREE.Vector3(0,50,3);
-		ambientIntensity= new THREE.Vector3(0.2,0.2,0.2);
+		ambientIntensity= new THREE.Vector3(0.01,0.01,0.01);
 		objLoader(objectName,type,0.7,new THREE.Vector3(0,0,-10),new THREE.Vector3(-150*gradi,0,0));
 	}
 }
